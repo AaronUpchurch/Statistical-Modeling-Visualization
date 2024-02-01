@@ -1,4 +1,5 @@
 library(shiny)
+library(ggplot2)
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
@@ -34,7 +35,9 @@ ui <- fluidPage(
     mainPanel(
 
       # Output: Histogram ----
-      plotOutput(outputId = "distPlot")
+      plotOutput(outputId = "distPlot"),
+      
+      plotOutput(outputId = "logOdds")
 
     )
   )
@@ -66,13 +69,30 @@ server <- function(input, output) {
     plot_data <- data.frame(x = x_values, y = y_values)
     ggplot(plot_data, aes(x, y)) +
       geom_line() +
-      labs(title = "Logistic Function",
+      labs(title = "Probability Curve",
            x = "x",
-           y = withMathJax("$$\\pi$$"))
+           y = expression(pi))
 
+  })
+  
+  output$logOdds <- renderPlot({
+    x_values <- seq(-5, 5, length.out = 100)
+    
+    logistic_function <- function(x, a, c) {
+      y <- a * (x) + c
+      return(y)
+    }
+    y_values <- logistic_function(x_values, input$beta1, input$beta0)
+    
+    plot_data <- data.frame(x = x_values, y = y_values)
+    ggplot(plot_data, aes(x, y)) +
+      geom_line() +
+      labs(title = "Log Odds Curve",
+           x = "x",
+           y = "log odds") +
+      ylim(-30, 30)
   })
 
 }
 shinyApp(ui = ui, server = server)
 
-# 
