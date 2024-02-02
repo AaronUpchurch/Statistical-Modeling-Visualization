@@ -4,16 +4,16 @@ library(shiny)
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("STA 3180: Statistical Modeling Visualizations!"),
+  titlePanel("STA 3180: Statistical Modeling Visualizations"),
   sidebarLayout(position = "right",
                 sidebarPanel("By: Aaron Upchurch & Max LoGalbo"),
                 mainPanel(
                   h3("Applets"),
-                  h5(a("Tutorial", href = "/Tutorial")),
-                  h5(a("Logistic Regression", href = "/Logistic Regression")),
-                  h5(a("Boostrapping", href =       "/Bootstrapping")),
-                  h5(a("Cross Validation", href = "/Cross Validation")),
-                  h5(a("Decision Trees", href = "/Decision Trees"))
+                  h5(a("Tutorial", href = "/Statistical-Modeling-Visualization/Tutorial")),
+                  h5(a("Logistic Regression", href = "/Statistical-Modeling-Visualization/Logistic Regression")),
+                  h5(a("Boostrapping", href =       "/Statistical-Modeling-Visualization/Bootstrapping")),
+                  h5(a("Cross Validation", href = "/Statistical-Modeling-Visualization/Cross Validation")),
+                  h5(a("Decision Trees", href = "/Statistical-Modeling-Visualization/Decision Trees"))
                 )
   )
   
