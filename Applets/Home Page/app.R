@@ -9,11 +9,11 @@ ui <- fluidPage(
                 sidebarPanel("By: Aaron Upchurch & Max LoGalbo"),
                 mainPanel(
                   h3("Applets"),
-                  h5(a("Tutorial", href = "http://127.0.0.1:7446/Tutorial/Index.html")),
-                  h5(a("Logistic Regression", href = "http://127.0.0.1:7446/Logistic Regression/Index.html")),
-                  h5(a("Boostrapping", href =       "http://127.0.0.1:7446/Bootstrapping/Index.html")),
-                  h5(a("Cross Validation", href = "http://127.0.0.1:7446/Cross Validation/Index.html")),
-                  h5(a("Decision Trees", href = "http://127.0.0.1:7446/Decision Trees/Index.html"))
+                  h5(a("Tutorial", href = "/Tutorial/Index.html")),
+                  h5(a("Logistic Regression", href = "/Logistic Regression/Index.html")),
+                  h5(a("Boostrapping", href =       "/Bootstrapping/Index.html")),
+                  h5(a("Cross Validation", href = "/Cross Validation/Index.html")),
+                  h5(a("Decision Trees", href = "/Decision Trees/Index.html"))
                 )
   )
   
