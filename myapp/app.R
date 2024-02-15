@@ -9,7 +9,7 @@ ui <- fluidPage(
   titlePanel("Logistic Curve"),
   
   # Sidebar layout with input and output definitions ----
-  sidebarLayout(position = "right",
+  sidebarLayout(position = "left",
 
     # Sidebar panel for inputs ----
     sidebarPanel(
@@ -31,23 +31,39 @@ ui <- fluidPage(
                    min = -100,
                    max = 100,
                    value = 1),
+      numericInput(inputId = "beta2",
+                   label = withMathJax("$$\\text{Slope}\\hspace{.25cm}\\beta_2$$"),
+                   min = -100,
+                   max = 100,
+                   value = 1),
+      numericInput(inputId = "x2",
+                   label = withMathJax("$$\\text{Value for }X_2$$"),
+                   min = -100,
+                   max = 100,
+                   value = 1),
 
     ),
-    #Logit Form ----
-    mainPanel(withMathJax("$$\\text{Logit Form: }\\frac{\\pi}{1-\\pi}=\\beta_0+\\beta_1 x \\hspace{1cm} \\text{Probability Form: }\\pi = \\frac{e^{\\beta_0+\\beta_1 x}}{1+e^{\\beta_0+\\beta_1 x}}$$")),
-
+    mainPanel(
+      tabsetPanel(
+        tabPanel("X1", fluidRow(
+          splitLayout(cellWidths = c("45%", "45%"), plotOutput(outputId = "distPlot1"), plotOutput(outputId = "logOdds1"))
+        )),
+        tabPanel("X2", fluidRow(
+          splitLayout(cellWidths = c("45%", "45%"), plotOutput(outputId = "distPlot2"), plotOutput(outputId = "logOdds2"))
+        ))
+      ),
+      
+      fluidRow(
+        splitLayout(cellwidts = c("50%", "50%"), withMathJax("$$\\text{Logit: }\\frac{\\pi}{1-\\pi}=\\beta_0+\\beta_1 x_1 + \\beta_2 x_2$$"), textOutput(outputId = "logOddsValue") )
+      ),
+      fluidRow(
+        splitLayout(cellwidths = c("50%", "50%"), withMathJax("$$\\text{Probability: }\\pi = \\frac{e^{\\beta_0+\\beta_1 x+ \\beta_2 x_2}}{1+e^{\\beta_0+\\beta_1 x+ \\beta_2 x_2}}$$"), textOutput(outputId = "probabilityValue"))
+        
+      )
+      
+    ),
   ),
-  # Main panel for displaying outputs ----
-  mainPanel(
-    
-    # Output: Histogram ----
-    plotOutput(outputId = "distPlot"),
-    
-    plotOutput(outputId = "logOdds"),
-    textOutput(outputId = "logOddsValue"),
-    textOutput(outputId = "probabilityValue")
-    
-  )
+
 )
 
 # Define server logic required to draw a histogram ----
@@ -62,7 +78,7 @@ server <- function(input, output) {
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
   
-  output$distPlot <- renderPlot({
+  output$distPlot1 <- renderPlot({
     center <- -1*input$beta0/input$beta1
     
     
@@ -80,12 +96,12 @@ server <- function(input, output) {
     ggplot(plot_data, aes(x, y)) +
       geom_line() +
       labs(title = "Probability Curve",
-           x = "x",
+           x = "x1",
            y = expression(pi))
 
   })
   
-  output$logOdds <- renderPlot({
+  output$logOdds1 <- renderPlot({
     center <- -1*input$beta0/input$beta1
     
     x_values <- seq(center - 5, center + 5, length.out = 100)
@@ -100,30 +116,76 @@ server <- function(input, output) {
     ggplot(plot_data, aes(x, y)) +
       geom_line() +
       labs(title = "Log Odds Curve",
-           x = "x",
+           x = "x1",
+           y = TeX("$log\\frac{\\pi}{1-\\pi}$")) +
+      ylim(-30, 30)
+  })
+  
+  output$distPlot2 <- renderPlot({
+    center <- -1*input$beta0/input$beta2
+    
+    
+    x_values <- seq(center - 5, center + 5, length.out = 100)
+    
+    # Logistic function formula
+    logistic_function <- function(x, a, c) {
+      y <- 1 / (1 + exp(-(a * (x) + c)))
+      return(y)
+    }
+    
+    y_values <- logistic_function(x_values, input$beta2, input$beta0)
+    
+    plot_data <- data.frame(x = x_values, y = y_values)
+    ggplot(plot_data, aes(x, y)) +
+      geom_line() +
+      labs(title = "Probability Curve",
+           x = "x2",
+           y = expression(pi))
+    
+  })
+  
+  output$logOdds2 <- renderPlot({
+    center <- -1*input$beta0/input$beta2
+    
+    x_values <- seq(center - 5, center + 5, length.out = 100)
+    
+    logistic_function <- function(x, a, c) {
+      y <- a * (x) + c
+      return(y)
+    }
+    y_values <- logistic_function(x_values, input$beta2, input$beta0)
+    
+    plot_data <- data.frame(x = x_values, y = y_values)
+    ggplot(plot_data, aes(x, y)) +
+      geom_line() +
+      labs(title = "Log Odds Curve",
+           x = "x2",
            y = TeX("$log\\frac{\\pi}{1-\\pi}$")) +
       ylim(-30, 30)
   })
   
   output$logOddsValue <- renderText({
-    center <- -1*input$beta0/input$beta1
     
-    x_input <- input$x1
+    x1_input <- input$x1
+    x2_input <- input$x2
     beta0 <- input$beta0
     beta1 <- input$beta1
+    beta2 <- input$beta2
     
-    log_odds <- beta0 + beta1 * x_input
+    
+    log_odds <- beta0 + beta1 * x1_input + beta2 * x2_input
     paste("Log Odds:", log_odds)
   })
   
   output$probabilityValue <- renderText({
-    center <- -1*input$beta0/input$beta1
     
-    x_input <- input$x1
+    x1_input <- input$x1
+    x2_input <- input$x2
     beta0 <- input$beta0
     beta1 <- input$beta1
+    beta2 <- input$beta2
     
-    probability <- exp(beta0 + beta1 * x_input) / (1 + exp(beta0 + beta1 * x_input))
+    probability <- exp(beta0 + beta1 * x1_input + beta2 * x2_input) / (1 + exp(beta0 + beta1 * x1_input + beta2 * x2_input))
     paste("Probability:", probability)
   })
 
