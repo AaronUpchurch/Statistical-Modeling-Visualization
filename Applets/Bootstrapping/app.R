@@ -25,7 +25,10 @@ ui <- fluidPage(
                 choices = c("Normal" = "normal",
                             "Chi Squared" = "chi_squared",
                             "Binomial" = "binomial",
-                            "Proportion" = "proportion"),
+                            "Horseshoe - Weight" = "horseshoe_weight",
+                            "Horseshoe - Width" = "horseshoe_width"
+                            
+                            ),
     ),
     
     # Metric Selection
@@ -126,28 +129,47 @@ server <- function(input, output,session) {
   colors = c("normal" = "red",
              "chi_squared" = "blue",
              "binomial" = "green",
-             "proportion" = "orange"
+             "horseshoe_weight" = "orange",
+             "horseshoe_width" = "purple"
   )
   
   # data for population distribution
-  data=data.frame(
+  
+  data_distributions= list(
     normal=rnorm(100000),
     chi_squared = rchisq(100000, df = 1),
     binomial = rbinom(100000, size = 10, prob = 0.5),
-    proportion = rbinom(100000, size = 10, prob = 0.5) / 10
+    horseshoe_width = read.csv("datasets/horseshoecrabs.csv")$width,
+    horseshoe_weight = read.csv("datasets/horseshoecrabs.csv")$weight
+    
   )
+  
+
+
+  
+  # add small variablility to make each point unique for blue color coding later
+  data_distributions["horseshoe_width"] = data_distributions[["horseshoe_width"]] + rnorm(n = length(data_distributions[["horseshoe_width"]]), sd = 0.0001)
+  data_distributions["horseshoe_weight"] = data_distributions[["horseshoe_weight"]] + rnorm(n = length(data_distributions[["horseshoe_weight"]]), sd = 0.0001)
+  
+
   
   # population distribution histogram
   output$DistributionHistogram <- renderPlot({
     
-    p <- ggplot(data, aes_string(x = input$distribution))+
+
+    a <- as.data.frame(data_distributions[[input$distribution]])
+    
+    colnames(a) <- input$distribution
+    
+
+    p <- ggplot(a, aes_string(x = input$distribution))+
       geom_density(alpha=.2, fill=colors[input$distribution], bw = 0.8) +
       xlab(paste("\u03bc =",
-                 round(mean(data[[input$distribution]]),2),
+                 round(mean(data_distributions[[input$distribution]]),2),
                  "\u03c3 =",
-                 round(sd(data[[input$distribution]]),2))) +
+                 round(sd(data_distributions[[input$distribution]]),2))) +
       theme_linedraw() +
-      scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0), limits = c(0,0.5))
+      scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
     
     
     return(p)
@@ -187,22 +209,20 @@ server <- function(input, output,session) {
       })
       bootstrap_means$data <- c()
       
-      start <- sample.int(100000,1)
       output$sample_mean <- renderText({paste("\u03bc =",
                                               round(mean(my_sample()),2),
                                               "\u03C3",
                                               round(sd(my_sample()),2)
       )})
       
+      temp <- matrix(data = sample(data_distributions[[input$distribution]],49), nrow = 7)
+      
       
       output$sample_table <- renderTable(colnames = F,bordered = T,{
         
         
-        temp <- matrix(data = data[[input$distribution]][start:(start+48)], nrow = 7)
         
-        
-        print(temp)
-        print(round(last_added_value$value,2))
+
         
       
         
@@ -222,8 +242,7 @@ server <- function(input, output,session) {
         
       }, sanitize.text.function = function(x) x)
       
-      data[[input$distribution]][start:(start+48)]
-      
+      return(temp)
       
     }
   )
@@ -386,8 +405,7 @@ server <- function(input, output,session) {
         subset_bootstrap <- append(round(my_bootstrap()[1:n],2), rep("\U00A0 \U00A0 \U00A0",length(my_bootstrap())-n))
       
         last_added_value$value <- my_bootstrap()[n]
-        print(last_added_value$value)
-        
+
         
         output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
           
