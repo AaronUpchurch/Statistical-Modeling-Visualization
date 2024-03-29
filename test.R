@@ -1,7 +1,9 @@
 library(shiny)
+library(shinyjs)
 
 # Define UI for application
 ui <- fluidPage(
+  shinyjs::useShinyjs(), # Ensure shinyjs is activated
   sidebarLayout(
     sidebarPanel(
       actionButton("button1", "Button 1"),
@@ -13,27 +15,22 @@ ui <- fluidPage(
 )
 
 # Define server logic
-server <- function(input, output,session) {
+server <- function(input, output, session) {
   
-  goToButton2 <- reactiveValues(value = F)
+  # When button1 is pressed, trigger button2 click event
+  observeEvent(input$button1, {
+    shinyjs::click("button2")
+  })
   
   # Output for button 1
-  observeEvent(input$button1,{
+  observeEvent(input$button1, {
     print("Button 1 Pressed")
-    goToButton2$value <- T
   })
   
   # Output for button 2
-  observeEvent(input$button2,{
+  observeEvent(input$button2, {
     print("Button 2 Pressed")
   })
-  
-  observe({
-    if(goToButton2$value){
-    print("Button 2 Pressed")
-    goToButton2$value <- F
-    
-  }})
 }
 
 # Run the application

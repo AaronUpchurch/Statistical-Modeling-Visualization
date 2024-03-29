@@ -3,9 +3,13 @@
 # ============ Imports ==================#
 library(shiny)
 library(ggplot2)
+library(shinyjs)
+
 
 #========== User Interface ==============#
 ui <- fluidPage(
+  
+  shinyjs::useShinyjs(),
   
   #------- Title --------------------#
   titlePanel(h1("Bootstrapping Applet", align = "center")),
@@ -156,13 +160,17 @@ server <- function(input, output,session) {
     }
   })
   
+  # DONT DELETE
+  my_sample <- reactiveVal(-10)
   
+ 
   
   my_sample <- eventReactive(
     input$getSample,
     {
-      print("Getting new table")
       
+      print("Getting New Sample")
+
       
       #  clear boostrap and dotplots plots
       output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
@@ -171,11 +179,6 @@ server <- function(input, output,session) {
       })
       bootstrap_means$data <- c()
       
-      output$sample_mean <- renderText({paste("\u03bc =",
-                                              round(mean(my_sample()),2),
-                                              "\u03C3",
-                                              round(sd(my_sample()),2)
-      )})
       
       temp <- matrix(data = sample(data_distributions[[input$distribution]],49), nrow = 7)
       
@@ -209,6 +212,14 @@ server <- function(input, output,session) {
     }
   )
   
+  observeEvent(input$getSample,{
+    output$sample_mean <- renderText({paste("\u03bc =",
+                                            round(mean(my_sample()),2),
+                                            "\u03C3",
+                                            round(sd(my_sample()),2)
+    )})})
+  
+  
   
   
   
@@ -219,6 +230,8 @@ server <- function(input, output,session) {
   my_bootstrap <- eventReactive(
     input$getBootstrap,
     {
+      print("Clicked Bootstrap Button")
+      
       s <- sample(my_sample(), replace = T)
       
       button_click_time$data <- Sys.time()
@@ -248,10 +261,14 @@ server <- function(input, output,session) {
 
   
   observeEvent(input$get100Bootstrap, {
+    
+    # Click on getBootstrap button to trigger animation
+    shinyjs::click("getBootstrap")
+
   
     
     # Generate 100 Bootstrap Sample
-    for (i in 1:100){
+    for (i in 1:99){
       
       s <- sample(my_sample(), replace = T)
       
@@ -432,7 +449,10 @@ server <- function(input, output,session) {
   #------- Reset App if New Distribution ----------
   observeEvent(input$distribution, {
     
-    print("Clearing")
+    print("Getting New Distribution")
+    
+    #shinyjs::click("getSample")
+    
     
     # Deselect Show CI Checkbox
     updateCheckboxInput(session, "showCI", value = F)
@@ -443,6 +463,8 @@ server <- function(input, output,session) {
     output$ci_and <- renderText({""})
     output$ci_upper <- renderText({""})
     
+    
+    # STRANGE ERROR HERE
     # Delete Sample Mean and Standard Deviation Text
     output$sample_mean <- renderText({""})
     
@@ -453,8 +475,14 @@ server <- function(input, output,session) {
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
       matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)})
     
+    output$sample_table <- renderTable(colnames = F,bordered = T,{
+      matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)})
+    
+    
     # Clear Bootstrap Data
     bootstrap_means$data <- c()
+    
+    print("Finished Getting New Distribution")
     })
   
   
