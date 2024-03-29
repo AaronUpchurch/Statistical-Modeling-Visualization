@@ -9,14 +9,14 @@ ui <- fluidPage(
                 sidebarPanel("By: Aaron Upchurch & Max LoGalbo"),
                 mainPanel(
                   h3("Applets"),
-                  h5(a("Tutorial", href = "/Statistical-Modeling-Visualization/Tutorial")),
-                  h5(a("Logistic Regression", href = "/Statistical-Modeling-Visualization/Logistic Regression")),
-                  h5(a("Boostrapping", href =       "/Statistical-Modeling-Visualization/Bootstrapping")),
-                  h5(a("Cross Validation", href = "/Statistical-Modeling-Visualization/Cross Validation")),
-                  h5(a("Decision Trees", href = "/Statistical-Modeling-Visualization/Decision Trees"))
-                )
+                  h5(a("Tutorial", href = "http://127.0.0.1:7446/Tutorial/Index.html")),
+                  h5(a("Logistic Regression", href = "http://127.0.0.1:7446/Logistic Regression/Index.html"))
+                  ,h5(a("Boostrapping", href =       "http://127.0.0.1:7446/Bootstrapping/Index.html")),
+                  h5(a("Cross Validation", href = "http://127.0.0.1:7446/Cross Validation/Index.html")),
+                  h5(a("Decision Trees", href = "http://127.0.0.1:7446/Decision Trees/Index.html"))
+                  )
   )
-  
+
 )
 
 # Define server logic required to draw a histogram ----
@@ -30,8 +30,8 @@ server <- function(input, output) {
   # 1. It is "reactive" and therefore should be automatically
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
-  
-  
+
+    
   
   
 }
