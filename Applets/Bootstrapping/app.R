@@ -1,123 +1,93 @@
 # RShiny script for Bootstrapping Applet
 
-# Global Variables
-
-
 # ============ Imports ==================#
 library(shiny)
 library(ggplot2)
 
-#============= user Interface ==============#
+#========== User Interface ==============#
 ui <- fluidPage(
   
-  
   #------- Title --------------------#
-  titlePanel(h1("Bootstrapping Applet",
-                align = "center")),
+  titlePanel(h1("Bootstrapping Applet", align = "center")),
   
   #-------- Control Panel -------------
   fluidRow(sidebarPanel(
     
-    
-    # Distribution Selection
-    selectInput(inputId = "distribution",
-                label = "1. Select Population Distribution",
-                choices = c("Normal" = "normal",
-                            "Chi Squared" = "chi_squared",
-                            "Binomial" = "binomial",
-                            "Horseshoe - Weight" = "horseshoe_weight",
-                            "Horseshoe - Width" = "horseshoe_width"
-                            
-                            ),
-    ),
-    
-    # Metric Selection
-    selectInput(inputId = "metric",
-                label = "2. Select Metric",
-                choices = c("Mean" = "mean",
-                            "Variance" = "variance",
-                            "Standard Deviation" = "standard deviation",
-                            "Median" = "median"
-                ),
-    ),
-    
-    # Generate Sample Button
-    h5(strong("3. Draw Sample from Population")),
-    actionButton("getSample", "Generate Sample"),
-    
-    # Generate Bootsrap Button
-    h5(strong("4. Draw Bootstrap from Sample")),
-    actionButton("getBootstrap", "Generate Bootstrap Sample"),
-    
-    checkboxInput("showAnimation", "Show Animation", value = T, width = "800px"),
-    
-    h5(strong("5. Draw 100 Bootstraps from Sample")),
-    actionButton("get100Bootstrap", "Generate 100x Bootstrap Samples"),
-    
-    
-    # Show Bootstrap Confidence Interval Checkbox
-    h5(strong("6. Get Bootstrap Confidence Interval")),
-    checkboxInput("showCI", "Show Confidence Interval", value = FALSE, width = "800px"),
-    
-    
-    # Show Get Help Explanatation
-    actionButton("showHelp", "Get Help")
+      # Distribution Selection
+      selectInput(inputId = "distribution",
+                  label = "1. Select Population Distribution",
+                  choices = c("Normal" = "normal",
+                              "Chi Squared" = "chi_squared",
+                              "Binomial" = "binomial",
+                              "Horseshoe - Weight" = "horseshoe_weight",
+                              "Horseshoe - Width" = "horseshoe_width"),),
+      
+      # Metric Selection
+      selectInput(inputId = "metric",
+                  label = "2. Select Metric",
+                  choices = c("Mean" = "mean",
+                              "Variance" = "variance",
+                              "Standard Deviation" = "standard deviation",
+                              "Median" = "median"),),
+      
+      # Generate Sample Button
+      h5(strong("3. Draw Sample from Population")),
+      actionButton("getSample", "Generate Sample"),
+      
+      # Generate Bootstrap Button
+      h5(strong("4. Draw Bootstrap from Sample")),
+      actionButton("getBootstrap", "Generate Bootstrap Sample"),
+      
+      # Show animation check box
+      checkboxInput("showAnimation", "Show Animation", value = T, width = "800px"),
+      
+      # Draw 100 Bootstraps button
+      h5(strong("5. Draw 100 Bootstraps from Sample")),
+      actionButton("get100Bootstrap", "Generate 100x Bootstrap Samples"),
+      
+      # Show Bootstrap Confidence Interval Checkbox
+      h5(strong("6. Get Bootstrap Confidence Interval")),
+      checkboxInput("showCI", "Show Confidence Interval", value = FALSE, width = "800px"),
+      
+      # Show Get Help Button
+      actionButton("showHelp", "Get Help")
   ),
-  
-  
-  
   
   
   #----------------- Graph Panel ------------------
   column(8, align = "center",
          
-         # Population Histogram
-         h5(strong("Population Distribution")),
-         plotOutput(outputId = "DistributionHistogram",
-                    width = "75%",
-                    height = "200px"),
+       # Population Histogram
+       h5(strong("Population Distribution")),
+       plotOutput(outputId = "DistributionHistogram",
+                  width = "75%",
+                  height = "200px"),
+       
+       # Sample table
+       fluidRow(column(6,align = "center",
+                h5(strong("Sample")),
+                tableOutput("sample_table"),
+                textOutput("sample_mean"),),
          
-         
-         
-         
-         # Sample table
-         fluidRow(
-           column(6,align = "center",
-                  h5(strong("Sample")),
-                  tableOutput("sample_table"),
-                  textOutput("sample_mean"),
-           ),
-           
-           # Bootstrapp Table
-           
-           column(6,align = "center",
-                  h5(strong("Bootstrap Sample")),
-                  tableOutput("bootstrap_table"),
-                  span(textOutput("bootstrap_mean"),style="color:red"),
-           )),
-         
-         # Bootstrapp Dot Plot
-         
-         h5(strong(textOutput("metric"))),
-         plotOutput("bootstrap_dotplot", width = "75%",
-                    height = "200px"),
-         
-         
-         #textOutput("confidenceInterval"),
-         side_by_side_text <- div(
-           style = "display: flex; flex-direction: row;justify-content: center;",
-           span(style = "color: black;", textOutput("ci_begin")),
-           span(style = "color: green;", textOutput("ci_lower")),
-           span(style = "color: black;", textOutput("ci_and")),
-           span(style = "color: green;", textOutput("ci_upper"))
-           
-         ),
-         
-         
-  )
-  )
-  
-)
+       # Bootstrap Table
+       column(6,align = "center",
+              h5(strong("Bootstrap Sample")),
+              tableOutput("bootstrap_table"),
+              span(textOutput("bootstrap_mean"),style="color:red"),)),
+       
+       # Bootstrap Dot Plot
+       h5(strong(textOutput("metric"))),
+       plotOutput("bootstrap_dotplot", width = "75%",
+                  height = "200px"),
+       
+       # Confidence Interval Text
+       side_by_side_text <- div(
+         style = "display: flex; flex-direction: row;justify-content: center;",
+         span(style = "color: black;", textOutput("ci_begin")),
+         span(style = "color: green;", textOutput("ci_lower")),
+         span(style = "color: black;", textOutput("ci_and")),
+         span(style = "color: green;", textOutput("ci_upper"))),
+)))
 
 #============== Server Functions ===================
 server <- function(input, output,session) {
@@ -130,33 +100,23 @@ server <- function(input, output,session) {
              "chi_squared" = "blue",
              "binomial" = "green",
              "horseshoe_weight" = "orange",
-             "horseshoe_width" = "purple"
-  )
+             "horseshoe_width" = "purple")
   
   # data for population distribution
-  
   data_distributions= list(
     normal=rnorm(100000),
     chi_squared = rchisq(100000, df = 1),
     binomial = rbinom(100000, size = 10, prob = 0.5),
     horseshoe_width = read.csv("datasets/horseshoecrabs.csv")$width,
-    horseshoe_weight = read.csv("datasets/horseshoecrabs.csv")$weight
-    
-  )
-  
-
-
+    horseshoe_weight = read.csv("datasets/horseshoecrabs.csv")$weight)
   
   # add small variablility to make each point unique for blue color coding later
-  data_distributions["horseshoe_width"] = data_distributions[["horseshoe_width"]] + rnorm(n = length(data_distributions[["horseshoe_width"]]), sd = 0.0001)
-  data_distributions["horseshoe_weight"] = data_distributions[["horseshoe_weight"]] + rnorm(n = length(data_distributions[["horseshoe_weight"]]), sd = 0.0001)
-  
-
+  data_distributions[["horseshoe_width"]] = data_distributions[["horseshoe_width"]] + rnorm(n = length(data_distributions[["horseshoe_width"]]), sd = 0.0001)
+  data_distributions[["horseshoe_weight"]] = data_distributions[["horseshoe_weight"]] + rnorm(n = length(data_distributions[["horseshoe_weight"]]), sd = 0.0001)
   
   # population distribution histogram
   output$DistributionHistogram <- renderPlot({
     
-
     a <- as.data.frame(data_distributions[[input$distribution]])
     
     colnames(a) <- input$distribution
@@ -182,7 +142,7 @@ server <- function(input, output,session) {
       matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)
     }
     else{
-      matrix(data = my_sample(), nrow = 7)
+      matrix(data = round(my_sample(),2), nrow = 7)
       
     }
   })
@@ -201,6 +161,8 @@ server <- function(input, output,session) {
   my_sample <- eventReactive(
     input$getSample,
     {
+      print("Getting new table")
+      
       
       #  clear boostrap and dotplots plots
       output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
@@ -227,7 +189,7 @@ server <- function(input, output,session) {
       
         
           
-          ret <- ifelse(round(temp,3) == round(last_added_value$value,3), 
+          ret <- ifelse(round(temp,6) == round(last_added_value$value,6), 
                         paste0('<span style="color:blue; font-weight:bold;">', round(temp,2), '</span>'), 
                         round(temp,2))
           
@@ -250,8 +212,7 @@ server <- function(input, output,session) {
   
   
   
-  #--------- Bootstrap Table -------------#
-  
+  #--------- Get Bootstrap -------------#
   button_click_time <- reactiveValues(data = Sys.time())
   
   
@@ -278,16 +239,20 @@ server <- function(input, output,session) {
         matrix(data = my_bootstrap(), nrow = 7)
       })
       
-      
-      
       return(s)
     }
   )
   
   
   #---------- Get 100 Bootstraps -------------- #
+
+  
   observeEvent(input$get100Bootstrap, {
+  
+    
+    # Generate 100 Bootstrap Sample
     for (i in 1:100){
+      
       s <- sample(my_sample(), replace = T)
       
       function_map <- list(
@@ -304,13 +269,12 @@ server <- function(input, output,session) {
     }
     
     # show new bootstrap table for continuity
-    
-    
-    
-    
-  })
+    output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
+      matrix(data = my_bootstrap(), nrow = 7)
+    })})
   
   
+ 
   
   
   #--------- Bootstrap Dotplot --------------- #
@@ -445,78 +409,75 @@ server <- function(input, output,session) {
   output$metric <- renderText({paste("Bootstrap ", input$metric,"s", sep = "")})
   
   
-  #-------- if click on show confidence interval --------#
-  observeEvent(input$showCI,
-               
-               
-               {
-                 
-                 if(input$showCI){
-                   output$ci_begin <- renderText({paste("We are 95% confident that the population ",input$metric,"is between \U00A0")})
-                   output$ci_lower <- renderText({round(percentile_2.5$data,2)})
-                   output$ci_and <- renderText({"\U00A0 and \U00A0"})
-                   output$ci_upper <- renderText({round(percentile_97.5$data,2)})
-                 }
-                 else{
-                   output$ci_begin <- renderText({""})
-                   output$ci_lower <- renderText({""})
-                   output$ci_and <- renderText({""})
-                   output$ci_upper <- renderText({""})
-                 }
-               }
-  )
+  #-------- Show Confidence Interval --------#
+  observeEvent(input$showCI,{
+         
+     # If Show CI box is checked, display text
+     if(input$showCI){
+       output$ci_begin <- renderText({paste("We are 95% confident that the population ",input$metric,"is between \U00A0")})
+       output$ci_lower <- renderText({round(percentile_2.5$data,2)})
+       output$ci_and <- renderText({"\U00A0 and \U00A0"})
+       output$ci_upper <- renderText({round(percentile_97.5$data,2)})
+     }
+    
+    # If Show CI box is not checked, display no text
+     else{
+       output$ci_begin <- renderText({""})
+       output$ci_lower <- renderText({""})
+       output$ci_and <- renderText({""})
+       output$ci_upper <- renderText({""})
+     }})
   
-  
-  #---------- Other -----------------------------------#
-  
-  # reset tables and plots if new distribution chosen
+
+  #------- Reset App if New Distribution ----------
   observeEvent(input$distribution, {
     
+    print("Clearing")
     
+    # Deselect Show CI Checkbox
+    updateCheckboxInput(session, "showCI", value = F)
+  
+    # Delete CI Interpretation Text
+    output$ci_begin <- renderText({""})
+    output$ci_lower <- renderText({""})
+    output$ci_and <- renderText({""})
+    output$ci_upper <- renderText({""})
+    
+    # Delete Sample Mean and Standard Deviation Text
+    output$sample_mean <- renderText({""})
+    
+    # Delete Bootstrap Table Metric Text
     output$bootstrap_mean <- renderText({""})
     
-    
-    
-    
+    # Clear Bootstrap Table
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
-      matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)
-      
-    })
+      matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)})
     
+    # Clear Bootstrap Data
     bootstrap_means$data <- c()
-  })
+    })
   
+  
+  #------- Reset App if New Metric ---------
   observeEvent(input$metric, {
     
-    
-    
+    # Clear Bootstrap Table
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
-      matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)
-      
-    })
+      matrix(data = rep("\U00A0 \U00A0 \U00A0",49), nrow = 7)})
     
+    # Clear Bootstrap Data
     bootstrap_means$data <- c()
   })
   
   
-  #-- Help ----------------------------
+  #-- Get Help Message ---------------------
   observeEvent(input$showHelp, {
-    message <- "
-               
-               
-    Bootstrapping generates new samples by resampling from the original observed data with replacement. <br> <br>
+    message <- "Bootstrapping generates new samples by resampling from the original observed data with replacement. <br> <br>
     A distribution of the statistic of interest is then created from these simulated samples. <br> <br>
     The confidence interval bounds are then derived from the 2.5% percentile and 97.5% of the distribution."
     showNotification(ui = HTML(message),
                      duration = 120,
-                     type = "message")
-  })
-  
-  
-  
-  
-  
-  
-}
+                     type = "message")})}
 
+# Call Shiny App
 shinyApp(ui, server)
