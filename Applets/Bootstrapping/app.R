@@ -5,15 +5,20 @@ library(shiny)
 library(ggplot2)
 library(shinyjs)
 library(stringr)
+library(shinyalert)
 
 
 #========== User Interface ==============#
 ui <- fluidPage(
   
+  
+  useShinyalert(),
   shinyjs::useShinyjs(),
   
   #------- Title --------------------#
   titlePanel(h1("Bootstrapping Applet", align = "center")),
+  
+  h5("By Aaron Upchurch", align = "center"),
   
   #-------- Control Panel -------------
   fluidRow(sidebarPanel(
@@ -44,11 +49,11 @@ ui <- fluidPage(
       actionButton("getBootstrap", "Generate Bootstrap Sample"),
       
       # Show animation check box
-      checkboxInput("showAnimation", "Show Animation", value = T, width = "800px"),
+      checkboxInput("showAnimation", "Slow Animation", value = T, width = "800px"),
       
       # Draw 100 Bootstraps button
-      h5(strong("5. Draw 100 Bootstraps from Sample")),
-      actionButton("get100Bootstrap", "Generate 100x Bootstrap Samples"),
+      h5(strong("5. Draw 300 Bootstraps from Sample")),
+      actionButton("get100Bootstrap", "Generate 300 Bootstrap Samples"),
       
       # Show Bootstrap Confidence Interval Checkbox
       h5(strong("6. Get Bootstrap Confidence Interval")),
@@ -69,13 +74,22 @@ ui <- fluidPage(
                   height = "200px"),
        
        # Sample table
-       fluidRow(column(6,align = "center",
+       fluidRow(column(5,align = "center",
                 h5(strong("Sample")),
                 tableOutput("sample_table"),
                 textOutput("sample_mean"),),
+                
+       column(2,align = "center",
+          
+              div(
+                style = "position: absolute; bottom: -130px; right: 60px;",
+                icon("right-long","fa-3x")
+              )
+             ),
+                
          
        # Bootstrap Table
-       column(6,align = "center",
+       column(5,align = "center",
               h5(strong("Bootstrap Sample")),
               tableOutput("bootstrap_table"),
               span(textOutput("bootstrap_mean"),style="color:red; font-weight: bold; font-size: 13px"),)),
@@ -96,6 +110,17 @@ ui <- fluidPage(
 
 #============== Server Functions ===================
 server <- function(input, output,session) {
+  
+  #------ Initial Popup -----------------#
+  showPopup <- reactiveVal(T)
+  
+  observeEvent(showPopup,{
+    shinyalert("Welcome", "This is a RShiny application to help students learn about bootstrapping.
+               
+                          If you need help, press the 'Get Help' button below.", 
+               size = "m")
+    showPopup(F)
+  })
   
   
   #---------- Population Distribution ---------------$
@@ -188,7 +213,7 @@ server <- function(input, output,session) {
         
         
         
-        if(input$showAnimation){
+        
         
       
         
@@ -196,10 +221,7 @@ server <- function(input, output,session) {
           ret <- ifelse(round(temp,6) == round(last_added_value$value,6), 
                         paste0('<span style="color:blue; font-weight:bold; font-size=12px">', round(temp,2), '</span>'), 
                         round(temp,2))
-        }
-        else{
-          ret <- temp
-        }
+        
           
 
         
@@ -278,8 +300,8 @@ server <- function(input, output,session) {
 
   
     
-    # Generate 100 Bootstrap Sample
-    for (i in 1:99){
+    # Generate 200 Bootstrap Sample
+    for (i in 1:299){
       
       s <- sample(my_sample(), replace = T)
       
@@ -330,8 +352,6 @@ server <- function(input, output,session) {
   output$bootstrap_dotplot <- renderPlot({
     
     
-    
-    
     dot_colors <- rep('Bootstraps', length(bootstrap_means$data))
     
     if(length(dot_colors) == 0){
@@ -350,7 +370,7 @@ server <- function(input, output,session) {
       percentile_2.5$data <- sort(bootstrap_means$data)[index_2.5]
       percentile_97.5$data <- sort(bootstrap_means$data)[index_97.5]
       
-      if(length(bootstrap_means$data) >= 100){
+      if(length(bootstrap_means$data) >= 300){
       dot_colors[which(bootstrap_means$data == percentile_2.5$data)[1]] = '2.5th Percentile'
       dot_colors[which(bootstrap_means$data == percentile_97.5$data)[1]] = '97.5th Percentile'
       }
@@ -371,12 +391,12 @@ server <- function(input, output,session) {
     dot_colors[which(bootstrap_means$data == metric_bootstrap_calculation)[1]] = "Most Recent"
     
     
-    d <- data.frame(x = bootstrap_means$data, fill = dot_colors)
+    d <- data.frame(x = bootstrap_means$data, Fill = dot_colors)
     category_colors <- c("Bootstraps" = "black", "Most Recent" = "red", "2.5th Percentile" = "Green","97.5th Percentile" = "Green")
     
     
     if(length(bootstrap_means$data) == 1){
-      ggplot(d, aes(x = x, fill = fill)) +
+      ggplot(d, aes(x = x, fill = Fill)) +
         scale_fill_manual(values = category_colors)+
         geom_dotplot(stackgroups = T,method = "histodot", dotsize = 0.5)+
         theme_linedraw() + xlim(0,2*bootstrap_means$data[1])  + 
@@ -384,7 +404,7 @@ server <- function(input, output,session) {
     }
     else{
     
-    ggplot(d, aes(x = x, fill = fill)) +
+    ggplot(d, aes(x = x, fill = Fill)) +
       scale_fill_manual(values = category_colors)+
       geom_dotplot(stackgroups = T,method = "histodot",  dotsize = 0.5)+
       theme_linedraw() + 
@@ -399,17 +419,30 @@ server <- function(input, output,session) {
   last_added_value <- reactiveValues(value = -1000)
   
   
-  
+  animation_speed <- reactiveVal(1)
   
   observe({
     # Re-execute this reactive expression after 1000 milliseconds
-    invalidateLater(1000, session)
+    invalidateLater(100, session)
     
     
     if(input$showAnimation){
-      n <- max(round(Sys.time() - button_click_time$data)  ,round(Sys.time()-Sys.time()))
-      if(n > length(my_bootstrap())){n <- length(my_bootstrap())}
-      
+      animation_speed(1)
+    }
+    else{
+      animation_speed(10)
+    }
+      n <- max(round( (Sys.time() - button_click_time$data)*animation_speed())  ,round(Sys.time()-Sys.time()))
+
+      if(n > length(my_bootstrap())){
+        if(n >= 3600){
+          n <- 0
+        }
+        else{
+        n <- length(my_bootstrap())
+        }
+      }
+
       
       if(n > 0){
         
@@ -447,7 +480,7 @@ server <- function(input, output,session) {
           matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",length(my_bootstrap())), nrow = 6)
         })
       }
-    }
+    #}
     
   }
   )
@@ -461,7 +494,7 @@ server <- function(input, output,session) {
      # If Show CI box is checked, display text
      if(input$showCI){
        
-       if(length(bootstrap_means$data) >= 100){
+       if(length(bootstrap_means$data) >= 300){
        output$ci_begin <- renderText({paste("We are 95% confident that the population ",input$metric,"is between \U00A0")})
        output$ci_lower <- renderText({round(percentile_2.5$data,2)})
        output$ci_and <- renderText({"\U00A0 and \U00A0"})
@@ -469,7 +502,7 @@ server <- function(input, output,session) {
        }
        else{
          
-           message <- "At least 100 bootstrap samples are required before making a confidence interval."
+           message <- "At least 300 bootstrap samples are required before making a confidence interval."
            showNotification(ui = HTML(message),
                             duration = 120,
                             type = "warning")
@@ -492,6 +525,8 @@ server <- function(input, output,session) {
     
     lock(T)
     
+    # reset button click time
+    button_click_time$data <- Sys.time() - as.numeric(3600)
     
 
     #shinyjs::click("getSample")
@@ -543,12 +578,40 @@ server <- function(input, output,session) {
   
   #-- Get Help Message ---------------------
   observeEvent(input$showHelp, {
-    message <- "Bootstrapping generates new samples by resampling from the original observed data with replacement. <br> <br>
-    A distribution of the statistic of interest is then created from these simulated samples. <br> <br>
-    The confidence interval bounds are then derived from the 2.5% percentile and 97.5% of the distribution."
-    showNotification(ui = HTML(message),
-                     duration = 120,
-                     type = "message")})}
+    shinyalert("Confused?", "
+                            <div style='text-align: center;'>
+                            Bootstrapping is a way to calculate statistics using 
+                                                                                <span style=\"font-weight:bold; \"> simulations </span> 
+                                                                                rather than 
+                                                                                              <span style=\"font-weight:bold; \"> equations</span>.<br> <br>
+               
+               
+                            <div style='text-align: center;'>
+                            Follow the steps below to practice bootstrapping:<br> <br>
+               
+                            
+               
+                            <div style='text-align: left; display: inline-block;'>
+                            <span style=\"font-size: 14px; line-height: 1;\">
+                            1. Refresh the page <br>
+                            2. Click <span style=\"text-decoration: underline;\"> Generate Sample</span> to draw a random sample from the normal population <br>
+                            3. Click <span style=\"text-decoration: underline;\"> Generate Bootstrap Sample</span> to draw a bootstrap sample from the random sample <br>
+                            <span style=\"font-size: 12px;\"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *Note how bootstrapping uses sampling with replacement and allows for duplicate values </span> <br> 
+                            <span style=\"font-size: 12px;\"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *The mean of the bootstrap sample is shown in red</span> <br> 
+                            4. Click on <span style=\"text-decoration: underline;\"> Generate 300 Bootstrap Samples</span> to draw 300 bootstrap samples <br>
+                            5. Check the <span style=\"text-decoration: underline;\"> Show Confidence Interval</span> box to show the bootstrap confidence interval <br>  <br>
+                            </span> 
+                            </div>
+                            <div style='text-align: center;'>
+                            Bootstrapping can be used to create confidence intervals for other population distributions and metrics.
+                            ",size = "m",html = T
+               )})
+  
+  
+  
+
+  
+  }
 
 # Call Shiny App
 shinyApp(ui, server)
