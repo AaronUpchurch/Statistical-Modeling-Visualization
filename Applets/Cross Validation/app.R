@@ -5,7 +5,7 @@ library(shinyalert)
 
 # Dataset Preprocessing
 titanic_df <- read.csv("datasets/titanic.csv")
-titanic_df$Initials <- sapply( strsplit(titanic_df$Name," "),function(x) substr(x[1], 1, 3))
+titanic_df$Initials <- strsplit(titanic_df$Name, ", ")[[1]]
 titanic_df <- na.omit(titanic_df)
 titanic_df <- titanic_df[sample(1:nrow(titanic_df),size=144),]
 
@@ -64,11 +64,6 @@ ui <- fluidPage(
         h5(strong("1. Create Non CV Model")),
                actionButton("runModel", "Run Model"),
                actionButton("run100Model", "Run 100 Model"),
-
-        # CV Model Buttons
-        h5(strong("2. Create CV Model")),
-               actionButton("runCVModel", "Run CV Models"),
-               actionButton("run100CVModel", "Run 100 CV Models"),
         
         # Get Help Button
         h5(strong("Get Help")),
@@ -119,8 +114,6 @@ ui <- fluidPage(
             textOutput("modelCV2Accuracy"),
             textOutput("modelCV3Accuracy"),
       
-      
-          
       ),
   
   
@@ -146,8 +139,8 @@ server <- function(input, output) {
   
   observeEvent(showPopup,{
     shinyalert("Welcome",
-               paste0("This is a RShiny applet designed to teach students about cross validaton <br> <br>",
-                      "The titanic dataset is used. <br> <br>",
+               paste0("This is a RShiny applet designed to teach students about <span style=\"font-weight:bold; \"> cross validation </span> <br> <br>",
+                      "Logistic regression models are train on the titanic survival dataset <br> <br>",
                       clean_titanic), 
                size = "m", html = T)
     showPopup(F)
@@ -258,7 +251,7 @@ server <- function(input, output) {
   output$modelCV1Params <- renderText({
     
     if(is.na(model1$params)){
-      ""
+      "ln(p/(1-p)) ="
     }
     else{
       paste(
@@ -275,7 +268,7 @@ server <- function(input, output) {
   output$modelCV1Params <- renderText({
     
     if(is.na(model2$params)){
-      ""
+      "ln(p/(1-p)) ="
     }
     else{
       paste(
@@ -292,7 +285,7 @@ server <- function(input, output) {
   output$modelCV3Params <- renderText({
     
     if(is.na(model3$params)){
-      ""
+      "ln(p/(1-p)) ="
     }
     else{
       paste(
@@ -398,6 +391,30 @@ server <- function(input, output) {
                  
                  
                })
+  
+  
+  
+  observeEvent(input$getHelp, {
+    shinyalert("Confused?", "
+                            <div style='text-align: center;'>
+                            Cross Validation is a way to obtain a more <span style=\"font-weight:bold; \"> reliable </span>test accuracy of a model. <br> <br>
+                                                                      
+               
+               
+           
+                            
+                            <span style=\"font-weight:bold; \"> Without Cross Validation </span> <br> 
+               
+                            The test accuracy of a model can depend heavily on the train-test split. <br> <br>
+               
+                            <span style=\"font-weight:bold; \"> With Cross Validation </span> <br> 
+               
+                            The dataset is randomly divided into 3 parts. <br> 
+                            Three models are trained on ___. <br> 
+                            The average . <br> 
+                             The dataset is randomly divided into 3 parts. <br> 
+                            ",size = "m",html = T
+    )})
   
 
   
