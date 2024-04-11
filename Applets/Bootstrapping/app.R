@@ -49,11 +49,11 @@ ui <- fluidPage(
       actionButton("getBootstrap", "Generate Bootstrap Sample"),
       
       # Show animation check box
-      checkboxInput("showAnimation", "Slow Animation", value = T, width = "800px"),
+      checkboxInput("showAnimation", "Show Animation", value = T, width = "800px"),
       
       # Draw 100 Bootstraps button
-      h5(strong("5. Draw 300 Bootstraps from Sample")),
-      actionButton("get100Bootstrap", "Generate 300 Bootstrap Samples"),
+      h5(strong("5. Draw 100 Bootstraps from Sample")),
+      actionButton("get100Bootstrap", "Generate 100 Bootstrap Samples"),
       
       # Show Bootstrap Confidence Interval Checkbox
       h5(strong("6. Get Bootstrap Confidence Interval")),
@@ -115,7 +115,7 @@ server <- function(input, output,session) {
   showPopup <- reactiveVal(T)
   
   observeEvent(showPopup,{
-    shinyalert("Welcome", "This is a RShiny application to help students learn about bootstrapping.
+    shinyalert("Welcome", "This is a RShiny application to help students learn about sbootstrapping.
                
                           If you need help, press the 'Get Help' button below.", 
                size = "m")
@@ -370,7 +370,7 @@ server <- function(input, output,session) {
       percentile_2.5$data <- sort(bootstrap_means$data)[index_2.5]
       percentile_97.5$data <- sort(bootstrap_means$data)[index_97.5]
       
-      if(length(bootstrap_means$data) >= 300){
+      if(length(bootstrap_means$data) >= 100){
       dot_colors[which(bootstrap_means$data == percentile_2.5$data)[1]] = '2.5th Percentile'
       dot_colors[which(bootstrap_means$data == percentile_97.5$data)[1]] = '97.5th Percentile'
       }
@@ -430,7 +430,7 @@ server <- function(input, output,session) {
       animation_speed(1)
     }
     else{
-      animation_speed(10)
+      animation_speed(20)
     }
       n <- max(round( (Sys.time() - button_click_time$data)*animation_speed())  ,round(Sys.time()-Sys.time()))
 
@@ -470,10 +470,6 @@ server <- function(input, output,session) {
         }, sanitize.text.function = function(x) x)
         
         
-    
-        
-        
-        
       }
       else{
         output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
@@ -494,7 +490,7 @@ server <- function(input, output,session) {
      # If Show CI box is checked, display text
      if(input$showCI){
        
-       if(length(bootstrap_means$data) >= 300){
+       if(length(bootstrap_means$data) >= 100){
        output$ci_begin <- renderText({paste("We are 95% confident that the population ",input$metric,"is between \U00A0")})
        output$ci_lower <- renderText({round(percentile_2.5$data,2)})
        output$ci_and <- renderText({"\U00A0 and \U00A0"})
@@ -502,7 +498,7 @@ server <- function(input, output,session) {
        }
        else{
          
-           message <- "At least 300 bootstrap samples are required before making a confidence interval."
+           message <- "At least 100 bootstrap samples are required before making a confidence interval."
            showNotification(ui = HTML(message),
                             duration = 120,
                             type = "warning")
@@ -598,7 +594,7 @@ server <- function(input, output,session) {
                             3. Click <span style=\"text-decoration: underline;\"> Generate Bootstrap Sample</span> to draw a bootstrap sample from the random sample <br>
                             <span style=\"font-size: 12px;\"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *Note how bootstrapping uses sampling with replacement and allows for duplicate values </span> <br> 
                             <span style=\"font-size: 12px;\"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *The mean of the bootstrap sample is shown in red</span> <br> 
-                            4. Click on <span style=\"text-decoration: underline;\"> Generate 300 Bootstrap Samples</span> to draw 300 bootstrap samples <br>
+                            4. Click on <span style=\"text-decoration: underline;\"> Generate 100 Bootstrap Samples</span> to draw 100 bootstrap samples <br>
                             5. Check the <span style=\"text-decoration: underline;\"> Show Confidence Interval</span> box to show the bootstrap confidence interval <br>  <br>
                             </span> 
                             </div>
