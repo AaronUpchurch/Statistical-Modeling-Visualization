@@ -11,13 +11,13 @@ library(shinyalert)
 #========== User Interface ==============#
 ui <- fluidPage(
   
+  # Enable use of shiny js package
+  useShinyjs(),
   
-  useShinyalert(),
-  shinyjs::useShinyjs(),
-  
-  #------- Title --------------------#
+  #------- Title ----------------------------------------#
   titlePanel(h1("Bootstrapping Applet", align = "center")),
   
+  #------- Author -------------------------#
   h5("By Aaron Upchurch", align = "center"),
   
   #-------- Control Panel -------------
@@ -63,7 +63,6 @@ ui <- fluidPage(
       actionButton("showHelp", "Get Help")
   ),
   
-  
   #----------------- Graph Panel ------------------
   column(8, align = "center",
          
@@ -77,25 +76,22 @@ ui <- fluidPage(
        fluidRow(column(5,align = "center",
                 h5(strong("Sample")),
                 tableOutput("sample_table"),
-                textOutput("sample_mean"),),
-                
+                textOutput("sample_mean_stdev"),),
+      
+       # Black arrow
        column(2,align = "center",
-          
               div(
                 style = "position: absolute; bottom: -130px; right: 60px;",
-                icon("right-long","fa-3x")
-              )
-             ),
+                icon("right-long","fa-3x"))),
                 
-         
        # Bootstrap Table
        column(5,align = "center",
               h5(strong("Bootstrap Sample")),
               tableOutput("bootstrap_table"),
-              span(textOutput("bootstrap_mean"),style="color:red; font-weight: bold; font-size: 13px"),)),
+              span(textOutput("bootstrap_metric"),style="color:red; font-weight: bold; font-size: 13px"),)),
        
        # Bootstrap Dot Plot
-       h5(strong(textOutput("metric")),align = "center"),
+       h5(strong(textOutput("bootstrap_dotplot_title")),align = "center"),
        plotOutput("bootstrap_dotplot", width = "75%",
                   height = "200px"),
        
@@ -115,13 +111,12 @@ server <- function(input, output,session) {
   showPopup <- reactiveVal(T)
   
   observeEvent(showPopup,{
-    shinyalert("Welcome", "This is a RShiny application to help students learn about sbootstrapping.
+    shinyalert("Welcome", "This is a RShiny application to help students learn about bootstrapping.
                
                           If you need help, press the 'Get Help' button below.", 
                size = "m")
     showPopup(F)
   })
-  
   
   #---------- Population Distribution ---------------$
   
@@ -147,163 +142,157 @@ server <- function(input, output,session) {
   # population distribution histogram
   output$DistributionHistogram <- renderPlot({
     
-    a <- as.data.frame(data_distributions[[input$distribution]])
+    # get selected population data
+    population_data <- as.data.frame(data_distributions[[input$distribution]])
     
-    colnames(a) <- input$distribution
+    # rename column name to selected distribution
+    colnames(population_data) <- input$distribution
     
-
-    p <- ggplot(a, aes_string(x = input$distribution))+
+    # create population histogram
+    population_histogram <- ggplot(population_data, aes_string(x = input$distribution))+
       geom_density(alpha=.2, fill=colors[input$distribution], bw = 0.8) +
       xlab(paste("\u03bc =",
-                 round(mean(data_distributions[[input$distribution]]),2),
+                 round(mean(data_distributions[[input$distribution]]),1),
                  "\u03c3 =",
-                 round(sd(data_distributions[[input$distribution]]),2))) +
+                 round(sd(data_distributions[[input$distribution]]),1))) +
       theme_linedraw() +
       scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
     
-    
-    return(p)
-    
+    return(population_histogram)
   })
   
   #--------- Sample Table ----------------#
   output$sample_table <- renderTable(colnames = F,bordered = T,{
-    if(input$getSample[1]==0){
-      matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)
-    }
-    else{
-      matrix(data = round(my_sample(),2), nrow = 6)
+    
+    # create sample table
+    ifelse(input$getSample[1]==0,
+      # if 'Get Sample' button has not been pressed, show blank table
+      matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6),
       
-    }
-  })
-  
-  output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
-    if(input$getBootstrap[1]==0){
-      matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)
-    }
-    else{
-      matrix(data = my_bootstrap(), nrow = 6)
-    }
-  })
-  
-  # DONT DELETE
-  my_sample <- reactiveVal(-99)
-  
- 
-  
-  my_sample <- eventReactive(
-    input$getSample,
-    {
-      
-
-      lock(F)
-      
-      #  clear boostrap and dotplots plots
-      output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
-        matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)
-        
-      })
-      bootstrap_means$data <- c()
-      
-      
-      temp <- matrix(data = sample(data_distributions[[input$distribution]],36), nrow = 6)
-      
-      
-      output$sample_table <- renderTable(colnames = F,bordered = T,{
-        
-        
-        
-        
-        
-      
-        
-          
-          ret <- ifelse(round(temp,6) == round(last_added_value$value,6), 
-                        paste0('<span style="color:blue; font-weight:bold; font-size=12px">', round(temp,2), '</span>'), 
-                        round(temp,2))
-        
-          
-
-        
-        
-        
-        
-        return(ret)
-        
-        
-        
-      }, sanitize.text.function = function(x) x)
-      
-      return(temp)
-      
+      # if 'Get Sample' has been pressed, show sample table
+      matrix(data = round(my_sample(),2), nrow = 6))
     }
   )
   
+  #--------- Bootstrap Table ----------------#
+  output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
+    
+    # create bootstrap table
+    ifelse(input$getBootstrap[1]==0,
+           
+      # If 'Get Boostrap' button has not been pressed, show blank table
+      matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6),
+      
+      # If 'Get Bootstrap' button has been pressed, show bootstrap table
+      matrix(data = my_bootstrap(), nrow = 6))
+  })
+  
+  #--------- Sample --------------------#
+  
+  # let my_sample be a reactive value for continuous updating
+  my_sample <- reactiveVal(-99)
+  
+  # when 'Get Sample' is pressed, generate a sample from population
+  my_sample <- eventReactive(
+    input$getSample,
+    {
+
+      # clear bootstrap table and dotplot
+      output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
+        matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)
+      })
+      
+      # clear bootstrap statistics list
+      bootstrap_statistics$data <- c()
+      
+      # draw sample from population distribution
+      sample_matrix <- matrix(data = sample(data_distributions[[input$distribution]],36), nrow = 6)
+      
+      # rendering sample table during bootstrap animation
+      output$sample_table <- renderTable(colnames = F,bordered = T,{
+          
+          # if a number in the sample tables matches the current number in the boostrap animation, make it blue
+          blue_sample_table <- ifelse(round(sample_matrix,6) == round(last_added_value$value,6), 
+                        
+                        # add blue font html code
+                        paste0('<span style="color:blue; font-weight:bold; font-size=12px">', round(sample_matrix,2), '</span>'), 
+                        
+                        # keep all other numbers the same
+                        round(sample_matrix,2))
+
+        return(blue_sample_table)
+      }, sanitize.text.function = function(x) x)
+      
+      return(sample_matrix)
+      })
+  
+  #---------- Sample Mean and Standard Deviation ---------#
+  
+  # When 'Get Sample' is pressed, calculate the sample mean and standard deviation for plotting
   observeEvent(input$getSample,{
-    output$sample_mean <- renderText({paste("\u03bc =",
+    output$sample_mean_stdev <- renderText({paste("\u03bc =",
                                             round(mean(my_sample()),2),
                                             "s =",
-                                            round(sd(my_sample()),2)
-    )})})
+                                            round(sd(my_sample()),2))})})
   
-  
-  
+  # Note: I'm not sure why I can't add this to the above eventReactive...
   
   
   #--------- Get Bootstrap -------------#
+  
+  # Reactive value for the last time to button was pressed
+  # Used for animation 
   button_click_time <- reactiveValues(data = Sys.time())
   
+  # Reactive value for the metric computed on the bootstrap
+  metric_bootstrap_calculation <- reactiveVal()
   
-  
+  # If 'Get Bootstrap' button is pressed
   my_bootstrap <- eventReactive(
     input$getBootstrap,
     {
       
-      
 
-      s <- sample(my_sample(), replace = T)
+      # if sample has not been drawn yet, through error
+      if(my_sample() == -99){
+        showNotification(ui = "You must generate a sample before generating a bootstrap!",
+                         duration = 120,
+                         type = "error")
+        return(NULL)
+      }
       
-
+      # Reset button click time to now
       button_click_time$data <- Sys.time()
       
+      # Map of metric names to R functions
       function_map <- list(
         "mean" = mean,
         "variance" = var,
         "standard deviation" = sd,
-        "maximum" = max,
-        "minimum" = min,
         "median" = median
       )
       
-      metric_bootstrap_calculation <- do.call(function_map[[input$metric]],list(x = s))
-      output$bootstrap_mean <- renderText({paste(input$metric,"=",round(metric_bootstrap_calculation,2))})
+      # Get new bootstrap
+      new_bootstrap <- sample(my_sample(), replace = T)
       
-      output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
-        matrix(data = my_bootstrap(), nrow = 6)
-      })
+      # Perform selected metric onto bootstrap
+      metric_bootstrap_calculation(do.call(function_map[[input$metric]],list(x =  new_bootstrap)))
       
-
-      return(s)
+      return(new_bootstrap)
     }
   )
   
-  
-  
-  
   #---------- Get 100 Bootstraps -------------- #
 
-  
   observeEvent(input$get100Bootstrap, {
     
     # Click on getBootstrap button to trigger animation
     shinyjs::click("getBootstrap")
-
-  
     
-    # Generate 200 Bootstrap Sample
-    for (i in 1:299){
+    # Generate 99 Bootstrap Sample
+    for (i in 1:99){
       
-      s <- sample(my_sample(), replace = T)
+      sample <- sample(my_sample(), replace = T)
       
       function_map <- list(
         "mean" = mean,
@@ -314,27 +303,29 @@ server <- function(input, output,session) {
         "median" = median
       )
       
-      metric_bootstrap_calculation <- do.call(function_map[[input$metric]],list(x = s))
-      bootstrap_means$data <- c(bootstrap_means$data,metric_bootstrap_calculation)
+      metric_bootstrap_calculation2 <- do.call(function_map[[input$metric]],list(x = sample))
+      bootstrap_statistics$data <- c(bootstrap_statistics$data,metric_bootstrap_calculation2)
     }
     
     # show new bootstrap table for continuity
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
-      matrix(data = my_bootstrap(), nrow = 6)
+      matrix(data = sample, nrow = 6)
     })})
   
-  
- 
-  
-  
+
   #--------- Bootstrap Dotplot --------------- #
-  bootstrap_means <- reactiveValues(data = c())
+  
+  # reactive values
+  bootstrap_statistics <- reactiveValues(data = c())
   percentile_2.5 <- reactiveValues(data = c())
   percentile_97.5 <- reactiveValues(data = c())
   
+  # render bootstrap dotplot title
+  output$bootstrap_dotplot_title <- renderText({paste("Bootstrap ", str_to_title(input$metric),"s", " Distribution",sep = "")})
   
-  
+  # add last calculated bootstrap metric to dotplot list
   observeEvent(input$getBootstrap, {
+    
     function_map <- list(
       "mean" = mean,
       "variance" = var,
@@ -343,8 +334,8 @@ server <- function(input, output,session) {
       "minimum" = min,
       "median" = median
     )
-    metric_bootstrap_calculation <- do.call(function_map[[input$metric]],list(x = my_bootstrap()))
-    bootstrap_means$data <- c(bootstrap_means$data, metric_bootstrap_calculation)
+    metric_bootstrap_calculation2 <- do.call(function_map[[input$metric]],list(x = my_bootstrap()))
+    bootstrap_statistics$data <- c(bootstrap_statistics$data, metric_bootstrap_calculation2)
   })
   
   
@@ -352,7 +343,7 @@ server <- function(input, output,session) {
   output$bootstrap_dotplot <- renderPlot({
     
     
-    dot_colors <- rep('Bootstraps', length(bootstrap_means$data))
+    dot_colors <- rep('Bootstraps', length(bootstrap_statistics$data))
     
     if(length(dot_colors) == 0){
       return(NULL)
@@ -362,17 +353,17 @@ server <- function(input, output,session) {
     if(input$showCI){
       
       # add slight noise to bootstrap means to allow for correct percentile identification
-      #bootstrap_means$data = bootstrap_means$data + rnorm(n = length(bootstrap_means$data),sd = 0.0001)
+      #bootstrap_statistics$data = bootstrap_statistics$data + rnorm(n = length(bootstrap_statistics$data),sd = 0.0001)
       
-      index_2.5 <- max(as.integer(0.025*length(bootstrap_means$data)),1)
-      index_97.5 <- as.integer(0.975*length(bootstrap_means$data))
+      index_2.5 <- max(as.integer(0.025*length(bootstrap_statistics$data)),1)
+      index_97.5 <- as.integer(0.975*length(bootstrap_statistics$data))
       
-      percentile_2.5$data <- sort(bootstrap_means$data)[index_2.5]
-      percentile_97.5$data <- sort(bootstrap_means$data)[index_97.5]
+      percentile_2.5$data <- sort(bootstrap_statistics$data)[index_2.5]
+      percentile_97.5$data <- sort(bootstrap_statistics$data)[index_97.5]
       
-      if(length(bootstrap_means$data) >= 100){
-      dot_colors[which(bootstrap_means$data == percentile_2.5$data)[1]] = '2.5th Percentile'
-      dot_colors[which(bootstrap_means$data == percentile_97.5$data)[1]] = '97.5th Percentile'
+      if(length(bootstrap_statistics$data) >= 100){
+      dot_colors[which(bootstrap_statistics$data == percentile_2.5$data)[1]] = '2.5th Percentile'
+      dot_colors[which(bootstrap_statistics$data == percentile_97.5$data)[1]] = '97.5th Percentile'
       }
       
       
@@ -386,20 +377,20 @@ server <- function(input, output,session) {
       "minimum" = min,
       "median" = median
     )
-    metric_bootstrap_calculation <- do.call(function_map[[input$metric]],list(x = my_bootstrap()))
+    metric_bootstrap_calculation2 <- do.call(function_map[[input$metric]],list(x = my_bootstrap()))
     
-    dot_colors[which(bootstrap_means$data == metric_bootstrap_calculation)[1]] = "Most Recent"
+    dot_colors[which(bootstrap_statistics$data == metric_bootstrap_calculation2)[1]] = "Most Recent"
     
     
-    d <- data.frame(x = bootstrap_means$data, Fill = dot_colors)
+    d <- data.frame(x = bootstrap_statistics$data, Fill = dot_colors)
     category_colors <- c("Bootstraps" = "black", "Most Recent" = "red", "2.5th Percentile" = "Green","97.5th Percentile" = "Green")
     
     
-    if(length(bootstrap_means$data) == 1){
+    if(length(bootstrap_statistics$data) == 1){
       ggplot(d, aes(x = x, fill = Fill)) +
         scale_fill_manual(values = category_colors)+
         geom_dotplot(stackgroups = T,method = "histodot", dotsize = 0.5)+
-        theme_linedraw() + xlim(0,2*bootstrap_means$data[1])  + 
+        theme_linedraw() + xlim(0,2*bootstrap_statistics$data[1])  + 
         theme(axis.text.y=element_blank(),axis.ticks.y=element_blank())
     }
     else{
@@ -416,72 +407,83 @@ server <- function(input, output,session) {
   
   #--------- Animation ----------------------------------#
   
+  # Record last value added to the bootstrap table
   last_added_value <- reactiveValues(value = -1000)
   
-  
+  # set animation speed
   animation_speed <- reactiveVal(1)
   
   observe({
     # Re-execute this reactive expression after 1000 milliseconds
     invalidateLater(100, session)
     
+    # Display bootstrap metric text
+    output$bootstrap_metric <- renderText({
+      ifelse(
+      # if bootstrap exists and if the bootstrap animation has ended
+      length(my_bootstrap()) > 0 && as.numeric((Sys.time() - button_click_time$data)*animation_speed()) >= 36,
+      
+      # display bootstrap metric
+      paste(input$metric,"=",round(metric_bootstrap_calculation(),2)),
+      
+      # else display nothing
+      "")})
     
-    if(input$showAnimation){
-      animation_speed(1)
-    }
-    else{
+    # change animation speed based on showAnimation check box
+    ifelse(input$showAnimation,
+      animation_speed(1),
       animation_speed(20)
-    }
-      n <- max(round( (Sys.time() - button_click_time$data)*animation_speed())  ,round(Sys.time()-Sys.time()))
+    )
+      
+      # get index of currently added bootstrap value in table
+      current_bootstrap_index <- round( (Sys.time() - button_click_time$data)*animation_speed())
+      
+      # ensure index is greater than 0
+      current_bootstrap_index <- max(current_bootstrap_index,round(Sys.time()-Sys.time()))
 
-      if(n > length(my_bootstrap())){
-        if(n >= 3600){
-          n <- 0
-        }
-        else{
-        n <- length(my_bootstrap())
-        }
+      # ensure index is less than length of bootstrap
+      if(current_bootstrap_index > length(my_bootstrap())){
+        current_bootstrap_index <- length(my_bootstrap())
       }
-
       
-      if(n > 0){
+      # if animation is current in progress
+      if(current_bootstrap_index > 0){
         
-        subset_bootstrap <- append(round(my_bootstrap()[1:n],2), rep("\U00A0 \U00A0 \U00A0 \U00A0",length(my_bootstrap())-n))
+        # if sample is blank, do nothing
+        # For when population is changed during an animation
+        if(length(bootstrap_statistics$data) == 0){
+          return(NULL)
+        }
+        # create in progress animated bootstrap table
+        #    will have some cells filled and some blank
+        animated_bootstrap <- append(round(my_bootstrap()[1:current_bootstrap_index],2), rep("\U00A0 \U00A0 \U00A0 \U00A0",length(my_bootstrap())-current_bootstrap_index))
       
-        last_added_value$value <- my_bootstrap()[n]
+        # record the last added value
+        last_added_value$value <- my_bootstrap()[current_bootstrap_index]
 
-        
+        # render bootstrap table for animation
         output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
           
+          # create animated matrix
+          animated_bootstrap_matrix <- matrix(data = animated_bootstrap, nrow = 6)
           
-          
-          temp <- matrix(data = subset_bootstrap, nrow = 6)
-          
-
-          ret <- ifelse(temp == round(last_added_value$value,2), 
-                 paste0('<span style="color:blue; font-weight:bold;">', temp, '</span>'), 
-                 temp)
-          
-
-          return(ret)
-          
-          
+          # add blue font to last value added in matrix
+          return_matrix <- ifelse(animated_bootstrap_matrix == round(last_added_value$value,2), 
+                 paste0('<span style="color:blue; font-weight:bold;">', animated_bootstrap_matrix, '</span>'), 
+                 animated_bootstrap_matrix)
+      
+          return(return_matrix)
           
         }, sanitize.text.function = function(x) x)
         
         
       }
+      
+      # if animation is not in progress, show blank table
       else{
         output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
           matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",length(my_bootstrap())), nrow = 6)
-        })
-      }
-    #}
-    
-  }
-  )
-  
-  output$metric <- renderText({paste("Bootstrap ", str_to_title(input$metric),"s", " Distribution",sep = "")})
+        })}})
   
   
   #-------- Show Confidence Interval --------#
@@ -490,20 +492,20 @@ server <- function(input, output,session) {
      # If Show CI box is checked, display text
      if(input$showCI){
        
-       if(length(bootstrap_means$data) >= 100){
+       # If at least 100 bootstrap samples have been drawn, create 95% confidence interval
+       if(length(bootstrap_statistics$data) >= 100){
        output$ci_begin <- renderText({paste("We are 95% confident that the population ",input$metric,"is between \U00A0")})
        output$ci_lower <- renderText({round(percentile_2.5$data,2)})
        output$ci_and <- renderText({"\U00A0 and \U00A0"})
        output$ci_upper <- renderText({round(percentile_97.5$data,2)})
        }
+       
+       # If less than 100 bootstrap samples have been draw, show warning
        else{
-         
-           message <- "At least 100 bootstrap samples are required before making a confidence interval."
-           showNotification(ui = HTML(message),
+           showNotification(ui = "At least 100 bootstrap samples are required before making a confidence interval.",
                             duration = 120,
                             type = "warning")
-       }
-     }
+       }}
     
     # If Show CI box is not checked, display no text
      else{
@@ -513,21 +515,11 @@ server <- function(input, output,session) {
        output$ci_upper <- renderText({""})
      }})
   
-  
-  lock <- reactiveVal(T)
-
-  #------- Reset App if New Distribution ----------
+  #------- Reset App if New Distribution Chosen ----------
   observeEvent(input$distribution, {
-    
-    lock(T)
     
     # reset button click time
     button_click_time$data <- Sys.time() - as.numeric(3600)
-    
-
-    #shinyjs::click("getSample")
-    
-
     
     # Deselect Show CI Checkbox
     updateCheckboxInput(session, "showCI", value = F)
@@ -538,13 +530,11 @@ server <- function(input, output,session) {
     output$ci_and <- renderText({""})
     output$ci_upper <- renderText({""})
     
-    
-    # STRANGE ERROR HERE
     # Delete Sample Mean and Standard Deviation Text
-    output$sample_mean <- renderText({""})
+    output$sample_mean_stdev <- renderText({""})
     
     # Delete Bootstrap Table Metric Text
-    output$bootstrap_mean <- renderText({""})
+    output$bootstrap_metric <- renderText({""})
     
     # Clear Bootstrap Table
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
@@ -553,14 +543,14 @@ server <- function(input, output,session) {
     output$sample_table <- renderTable(colnames = F,bordered = T,{
       matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)})
     
+
     
     # Clear Bootstrap Data
-    bootstrap_means$data <- c()
-    
+    bootstrap_statistics$data <- c()
     })
   
   
-  #------- Reset App if New Metric ---------
+  #------- Reset App if New Metric Chosen ---------
   observeEvent(input$metric, {
     
     # Clear Bootstrap Table
@@ -568,7 +558,7 @@ server <- function(input, output,session) {
       matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)})
     
     # Clear Bootstrap Data
-    bootstrap_means$data <- c()
+    bootstrap_statistics$data <- c()
   })
   
   
@@ -576,16 +566,10 @@ server <- function(input, output,session) {
   observeEvent(input$showHelp, {
     shinyalert("Confused?", "
                             <div style='text-align: center;'>
-                            Bootstrapping is a way to calculate statistics using 
-                                                                                <span style=\"font-weight:bold; \"> simulations </span> 
-                                                                                rather than 
-                                                                                              <span style=\"font-weight:bold; \"> equations</span>.<br> <br>
-               
+                            Bootstrapping is a way to calculate statistics using <span style=\"font-weight:bold; \"> simulations </span> rather than <span style=\"font-weight:bold; \"> equations</span>.<br> <br>
                
                             <div style='text-align: center;'>
                             Follow the steps below to practice bootstrapping:<br> <br>
-               
-                            
                
                             <div style='text-align: left; display: inline-block;'>
                             <span style=\"font-size: 14px; line-height: 1;\">
@@ -600,14 +584,8 @@ server <- function(input, output,session) {
                             </div>
                             <div style='text-align: center;'>
                             Bootstrapping can be used to create confidence intervals for other population distributions and metrics.
-                            ",size = "m",html = T
-               )})
-  
-  
-  
-
-  
-  }
+                            "
+               ,size = "m",html = T)})}
 
 # Call Shiny App
 shinyApp(ui, server)

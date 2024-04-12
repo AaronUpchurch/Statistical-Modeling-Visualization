@@ -1,0 +1,12 @@
+name: cross_validation
+title:
+username: aaronupchurch
+account: aaronupchurch
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11742571
+bundleId: 8486236
+url: https://aaronupchurch.shinyapps.io/cross_validation/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
