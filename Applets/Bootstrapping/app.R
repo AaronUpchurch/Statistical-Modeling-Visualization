@@ -32,8 +32,9 @@ ui <- fluidPage(
                   choices = c("Normal" = "normal",
                               "Chi Squared" = "chi_squared",
                               "Binomial" = "binomial",
-                              "Horseshoe - Weight" = "horseshoe_weight",
-                              "Horseshoe - Width" = "horseshoe_width"),),
+                              "Horseshoe - Width" = "horseshoe_width",
+                              "Horseshoe - Weight" = "horseshoe_weight"
+                  ),),
       
       # Metric Selection
       selectInput(inputId = "metric",
@@ -130,7 +131,7 @@ server <- function(input, output,session) {
                   ")}
     
     # after creating second bootstrap
-    else if(input$getBootstrap < 5){
+    else if(input$getBootstrap < 3){
       text <-  HTML("The dotplot of bootstrap means will keep being filled as more bootstraps are created. <br> <br>
                     Keep generating bootstraps.
                   ")}
@@ -139,7 +140,7 @@ server <- function(input, output,session) {
       text <-  HTML("<b>Draw 100 bootstraps from the sample</b>.
                   ")}
     
-    else if(input$showCI==F){
+    else if(input$showCI==F && input$distribution == "normal" ){
       text <-  HTML("Click on <b> show confidence interval</b> to create a confidence interval for the <u>population mean</u>.
                   ")}
     
@@ -233,7 +234,8 @@ server <- function(input, output,session) {
       matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6),
       
       # if 'Get Sample' has been pressed, show sample table
-      matrix(data = round(my_sample(),2), nrow = 6))
+      #HERE
+      matrix(data = toString(round(my_sample(),2)), nrow = 6))
     }
   )
   
@@ -271,9 +273,11 @@ server <- function(input, output,session) {
       # draw sample from population distribution
       sample_matrix <- matrix(data = sample(data_distributions[[input$distribution]],36), nrow = 6)
       
+      
       # rendering sample table during bootstrap animation
       output$sample_table <- renderTable(colnames = F,bordered = T,{
           
+          #HERE
           # if a number in the sample tables matches the current number in the boostrap animation, make it blue
           blue_sample_table <- ifelse(round(sample_matrix,6) == round(last_added_value$value,6), 
                         
@@ -281,7 +285,7 @@ server <- function(input, output,session) {
                         paste0('<span style="color:blue; font-weight:bold; font-size=12px">', round(sample_matrix,2), '</span>'), 
                         
                         # keep all other numbers the same
-                        round(sample_matrix,2))
+                        paste0(round(sample_matrix,2)))
 
         return(blue_sample_table)
       }, sanitize.text.function = function(x) x)
@@ -315,12 +319,14 @@ server <- function(input, output,session) {
     input$getBootstrap,
     {
       
-
-      # if sample has not been drawn yet, through error
-      if(my_sample() == -99){
-        showNotification(ui = "You must generate a sample before generating a bootstrap!",
+      # if sample has not been drawn yet, throw error
+      if(input$getSample == 0){
+        showNotification(ui = "You must crate a sample before creating a bootstrap!",
                          duration = 120,
                          type = "error")
+        
+        # get my_sample() so exists (Weird bug if remove)
+        my_sample()
         return(NULL)
       }
       
@@ -399,6 +405,14 @@ server <- function(input, output,session) {
     )
     metric_bootstrap_calculation2 <- do.call(function_map[[input$metric]],list(x = my_bootstrap()))
     bootstrap_statistics$data <- c(bootstrap_statistics$data, metric_bootstrap_calculation2)
+    
+    # Display bootstrap metric text
+    output$bootstrap_metric <- renderText({
+      
+      # display bootstrap metric
+      paste(input$metric,"=",round(metric_bootstrap_calculation(),2))
+      
+    })
   })
   
   
@@ -452,7 +466,7 @@ server <- function(input, output,session) {
     if(length(bootstrap_statistics$data) == 1){
       ggplot(d, aes(x = x, fill = Fill)) +
         scale_fill_manual(values = category_colors)+
-        geom_dotplot(stackgroups = T,method = "histodot", dotsize = 0.4)+
+        geom_dotplot(stackgroups = T,method = "histodot", dotsize = 0.3)+
         theme_linedraw() + xlim(0,2*bootstrap_statistics$data[1])  + 
         theme(axis.text.y=element_blank(),axis.ticks.y=element_blank())
     }
@@ -460,7 +474,7 @@ server <- function(input, output,session) {
     
     ggplot(d, aes(x = x, fill = Fill)) +
       scale_fill_manual(values = category_colors)+
-      geom_dotplot(stackgroups = T,method = "histodot",  dotsize = 0.4)+
+      geom_dotplot(stackgroups = T,method = "histodot",  dotsize = 0.3)+
       theme_linedraw() + 
         xlab(paste("bootstrap ",input$metric,"s",sep="")) +
         theme(axis.text.y=element_blank(),axis.ticks.y=element_blank()) 
@@ -480,17 +494,7 @@ server <- function(input, output,session) {
     # Re-execute this reactive expression after 1000 milliseconds
     invalidateLater(100, session)
     
-    # Display bootstrap metric text
-    output$bootstrap_metric <- renderText({
-      ifelse(
-      # if bootstrap exists and if the bootstrap animation has ended
-      length(my_bootstrap()) > 0 && as.numeric((Sys.time() - button_click_time$data)*animation_speed()) >= 36,
-      
-      # display bootstrap metric
-      paste(input$metric,"=",round(metric_bootstrap_calculation(),2)),
-      
-      # else display nothing
-      "")})
+   
     
     # change animation speed based on showAnimation check box
     ifelse(input$showAnimation,
@@ -599,6 +603,9 @@ server <- function(input, output,session) {
     # Delete Bootstrap Table Metric Text
     output$bootstrap_metric <- renderText({""})
     
+    
+    # Deleete bootstrap 
+    
     # Clear Bootstrap Table
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
       matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)})
@@ -620,6 +627,9 @@ server <- function(input, output,session) {
     output$bootstrap_table <- renderTable(colnames = F,bordered = T,{
       matrix(data = rep("\U00A0 \U00A0 \U00A0 \U00A0",36), nrow = 6)})
     
+    # clear bootstrap metic text
+    output$bootstrap_metric <- renderText({""})
+    
     # Clear Bootstrap Data
     bootstrap_statistics$data <- c()
   })
@@ -632,21 +642,35 @@ server <- function(input, output,session) {
                             Bootstrapping is a way to calculate statistics using <span style=\"font-weight:bold; \"> simulations </span> rather than <span style=\"font-weight:bold; \"> equations</span>.<br> <br>
                
                             <div style='text-align: center;'>
-                            Follow the steps below to practice bootstrapping:<br> <br>
+                            Refresh the page and follow the tutorial.<br> <br>
+
+                            Bootstrapping Steps: <br>
                
                             <div style='text-align: left; display: inline-block;'>
                             <span style=\"font-size: 14px; line-height: 1;\">
-                            1. Refresh the page <br>
-                            2. Click <span style=\"text-decoration: underline;\"> Generate Sample</span> to draw a random sample from the normal population <br>
-                            3. Click <span style=\"text-decoration: underline;\"> Generate Bootstrap Sample</span> to draw a bootstrap sample from the random sample <br>
-                            <span style=\"font-size: 12px;\"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *Note how bootstrapping uses sampling with replacement and allows for duplicate values </span> <br> 
-                            <span style=\"font-size: 12px;\"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *The mean of the bootstrap sample is shown in red</span> <br> 
-                            4. Click on <span style=\"text-decoration: underline;\"> Generate 100 Bootstrap Samples</span> to draw 100 bootstrap samples <br>
-                            5. Check the <span style=\"text-decoration: underline;\"> Show Confidence Interval</span> box to show the bootstrap confidence interval <br>  <br>
-                            </span> 
-                            </div>
-                            <div style='text-align: center;'>
-                            Bootstrapping can be used to create confidence intervals for other population distributions and metrics.
+                            1. A sample is drawn from the population. <br> 
+                            2. A bootstrap is created by sampling with replacement from the sample. <br>
+                               \U00A0 \U00A0\U00A0\U00A0\U00A0\U00A0*This allows for duplicate values to be in the bootstrap. <br>
+                            3. The mean of the bootstrap is recorded. <br>
+                            4. Many bootstraps are created and their means are recorded.<br>
+                            5. A 95% confidence interval for the population mean can be created by taking the <br>
+                               \U00A0 \U00A0 2.5th and 97.5th percentile of the bootstrap means.
+                          </span> </div>
+               
+               
+               
+               
+               
+               
+               
+               
+               
+               
+               
+            
+                       
+                                   
+
                             "
                ,size = "m",html = T)})}
 
