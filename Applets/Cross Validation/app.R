@@ -55,9 +55,11 @@ ui <- fluidPage(
                                                label = "3. Select K", 
                                                choices = c(2,3,4,6,8,12,16,24,48,144)),
                  
+                 
+                 
                  # Todo Text Box
                  h5(strong("Tutorial")),
-                 h5(uiOutput("multiline_text")),
+                 h5(uiOutput("tutorial_text")),
                  
                  # Get Help Button
                  h5(strong("Get Help")),
@@ -93,6 +95,7 @@ ui <- fluidPage(
            # Model Information Dataset
            h5(strong(textOutput("cvModelInformation"))),
            tableOutput("cvModelDataframe"),
+           
     ),),
   
   # Name Table Formatting
@@ -113,6 +116,7 @@ ui <- fluidPage(
         
 # Server Logic
 server <- function(input, output,session) {
+
   
   
   # Hide/Show Buttons 
@@ -148,7 +152,9 @@ server <- function(input, output,session) {
   output$kFoldTitle <- renderText({ifelse(input$createCVModel == 0,"","K Fold Cross Validation")})
   
   # Text Box Rendering Logic
-  output$multiline_text <- renderUI({
+  output$tutorial_text <- renderUI({
+    
+    modelCountbefore3 <- 0
     
     # Starter Text
     if(input$createModel == 0){
@@ -194,10 +200,11 @@ server <- function(input, output,session) {
                     The <span style=\'color:red\'> average test accuracy </span> is then computed. <br> <br>
                     
                     Keep creating models with cross validation and notice how the <span style=\'color:red\'> average test accuracy </span> is more consistent than before.")
+      
     }
     
     # after creating 8 models with K=2
-    else if(input$k == 2){
+    else if(input$k == 2 || input$createCVModel == 5){
       text <-  HTML("Increase K to 3 and create another model")
     }
     
@@ -217,8 +224,11 @@ server <- function(input, output,session) {
     
     # once K is 8
     else{
-      text <-  HTML("At K = 12, the <span style=\'color:red\'> test accuracy </span> is almost perfectly constant. <br> <br>
-                    In summary, cross validation is useful because it creates a <b>more reliable</b> test accuracy for a model.")
+      text <-  HTML("At K = 12, the <span style=\'color:red\'> test accuracy </span> is very constant <br> <br>
+                    
+                    We now know that the true accuracy of our model will be about <u>83%</u>. <br> <br>
+                    
+                    In summary, cross validation is useful because it creates a <b>more consistent</b> test accuracy for a model.")
     }
     
     
@@ -238,35 +248,37 @@ server <- function(input, output,session) {
     box_text})
   
   #=========== Initial Popup Message ==================#
+  small_titanic <- reactiveVal()
+  
   showPopup <- reactiveVal(T)
   
     observeEvent(showPopup,{
       
     # Create smaller dataset for initial message
-    small_titanic <- titanic_df[1:5,c("Lastname","Sex","Age","Pclass","Survived")]
+    small_titanic(titanic_df[1:5,c("Lastname","Sex","Age","Pclass","Survived")])
     
     # Add HTML code to smaller table in popup
-    small_titanic <- apply(small_titanic,
+    small_titanic(apply(small_titanic(),
                            MARGIN=2,
                            FUN=function(x){
                              paste0('<span style="font-size:14px">', x, '</span>')
-                           })
+                           }))
     
-    small_titanic <- apply(small_titanic,
+    small_titanic(apply(small_titanic(),
                            MARGIN=2,
                            FUN = function(x){
                              paste0("<td class = \"text-inside-cell2\">",x,"</td>")
-                           })
+                           }))
     
-    small_titanic <- apply(small_titanic,
+    small_titanic(apply(small_titanic(),
                            MARGIN=1,
                            FUN=function(x){
                              paste("<tr>",x[1],x[2],x[3],x[4],x[5],"</tr>")
-                           })
+                           }))
     
-    small_titanic <- toString(small_titanic)
+    small_titanic(toString(small_titanic()))
     
-    small_titanic <- paste0("<center>
+    small_titanic(paste0("<center>
                         <table border='1'>
                            <tr>
                               <th> <span class=\"text-inside-cell2\";style=\"font-size:14px\"> Last Name </span> </th>
@@ -276,16 +288,16 @@ server <- function(input, output,session) {
                               <th> <span class=\"text-inside-cell2\";style=\"font-size:14px\"> Survived </span> </th>
                            </tr>",
                         
-                        small_titanic,
+                        small_titanic(),
                         
                         "</table>
-                            </center>")
+                            </center>"))
     
-    small_titanic <- gsub(',', '', small_titanic)
+    small_titanic(gsub(',', '', small_titanic()))
     shinyalert("Welcome",
                paste0("This is a RShiny applet designed to teach students about <span style=\"font-weight:bold; \"> cross validation </span> <br> <br>",
                       "We'll use <u>logistic regression models</u> to predict <br> if passengers on the Titanic would have <u>survived</u> <br> <br>",
-                      small_titanic), 
+                      small_titanic()), 
                size = "m", html = T)
     showPopup(F)
   })
@@ -325,27 +337,37 @@ server <- function(input, output,session) {
   #================ Outputs ======================
   
   # Dataset
-  output$cvNameDataframe <- renderTable(colnames = F,bordered = T,width = "100px",{
+  
+  observeEvent(input$createCVModel,{
     
-    if(input$createCVModel== 0 ){
-      return(NULL)
-    }
-    
-    temp <- matrix(data = dataset$whole$Lastname, nrow = 12)
-    
-    add_color <- function(t){
-      for(i in 1:input$k){
-        if(t %in% dataset$splits[[i]]$Lastname){
-          return(paste0('<span class="text-inside-cell" style="color:',html_colors()[[i]],'; font-size:11px">', t, '</span>'))
+    output$cvNameDataframe <- renderTable(colnames = F,bordered = T,width = "100px",{
+      
+      
+      
+      # error here with if k is changed to lower, it glitches
+      if(input$createCVModel== 0 ){
+        return(NULL)
+      }
+      
+      temp <- matrix(data = dataset$whole$Lastname, nrow = 12)
+      
+      add_color <- function(t){
+        for(i in 1:length(dataset$splits)){
+          if(t %in% dataset$splits[[i]]$Lastname){
+            return(paste0('<span class="text-inside-cell" style="color:',html_colors()[[i]],'; font-size:11px">', t, '</span>'))
+          }
         }
       }
-    }
+      
+      ret <- matrix(mapply(add_color,temp),nrow=24)
+      
+      
+      return(ret)
+    }, sanitize.text.function = function(x) x)
     
-    ret <- matrix(mapply(add_color,temp),nrow=24)
-
-    
-    return(ret)
-  }, sanitize.text.function = function(x) x)
+  })
+  
+  
   
   # Dataset
   output$nameDataframe <- renderTable(colnames = F,bordered = T,width = "100px",{
@@ -471,18 +493,19 @@ server <- function(input, output,session) {
                      
 
                      # Get test set accuracy
-                     accuracies[[i]] <- paste(toString(round(mean(test_preds == test$Survived)*100,2)),"%",sep="")
+                     accuracies[[i]] <- paste(toString(round(mean(test_preds == test$Survived)*100)),"%",sep="")
                      accuracy_ints[[i]] <- mean(test_preds == test$Survived)*100
 
                      # Get model coefficients
-                     coeffs <- round(coef(models[[i]]),2)
+                     # Get model coefficients
+                     coeffs <- coef(models[[i]])
                      
                      params[[i]] <- paste(
-                       "ln(p/(1-p)) = ", 
-                       coeffs["(Intercept)"],
-                       " + PClass", coeffs["Pclass"],
-                       " + Age",  coeffs["Age"],
-                       " + Sex",  coeffs["Sexmale"],
+                       #"ln(p/(1-p)) = ", 
+                       round(coeffs["(Intercept)"],1)," ",
+                       round(coeffs["Pclass"],1),"Class ",
+                       round(coeffs["Age"],2),"Age ",
+                       round(coeffs["Sexmale"],1),"Sex ",
                        sep = "")
                      
                      # Get model train size and test size
@@ -505,7 +528,7 @@ server <- function(input, output,session) {
                  # add formating
                  for(i in 1:input$k){
                    for(j in 1:length(trainSet[[i]])){
-                        trainSet[[i]][[j]] <- paste0('<span class= \"text-inside-cell\" style=\"color:',html_colors()[[as.integer(trainSet[[i]][[j]])]],'; font-size:20px; display: inline;\">', "&#9632 \U00A0  ", '</span>')
+                        trainSet[[i]][[j]] <- paste0('<span class= \"text-inside-cell\" style=\"color:',html_colors()[[as.integer(trainSet[[i]][[j]])]],'; font-size:20px; display: inline;\">', "&#9632", paste(rep("\U202F",2),collapse = ""),'</span>')
                    }
                    trainSet[[i]] <- paste(trainSet[[i]],collapse="")
                  testSet[[i]] <- paste0('<span class= \"text-inside-cell\" style=\"color:',html_colors()[[i]],';  font-size:20px; \">', "&#9632", '</span>')
@@ -515,28 +538,30 @@ server <- function(input, output,session) {
                  trainSize <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px;\">",as.integer(as.array(trainSize)),"</span>")
                  testSize <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px;\">",as.integer(as.array(testSize)),"</span>")
                  accuracies <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px;\">",as.array(accuracies),"</span>")
+                 params <- paste0("<span class= \"text-inside-cell\" style=\"font-size:11px;\">",as.array(params),"</span>")
                  
 
 
                  # Add Accuracy row
-                 number <- append(c("Average"),number)
+                 number <- append(c("<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Mean </span>"),number)
                  trainSet <- as.array(append(c(" "),as.array(trainSet)))
                  testSet <- as.array(append(c(" "),as.array(testSet)))
                  trainSize <- append(c(" "),trainSize)
                  testSize <- append(c(" "),testSize)
                  accuracies <- append(c(paste0(round(mean(as.numeric(accuracy_ints))),"%")),accuracies)
+                 params <- as.array(append(c(" "),params))
                  
                  accuracies[[1]] <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px; color:red;\">",accuracies[[1]],"</span>")
                  
                  
                  cvModelDataframe(data.frame(
-                   "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Model # </span>" = number,
+                   "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Model </span>" = number,
                    "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Train Set </span>" = trainSet,
                    "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Test Set </span>"= testSet,
-                   "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Train Set Size </span>" = trainSize,
-                   "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Test Set Size </span>" = testSize,
+                  #"<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Train Size </span>" = trainSize,
+                  # "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Test Size </span>" = testSize,
+                   "<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Parameters </span>" = as.array(params),
                    "<span class= \"text-inside-cell\" style=\"font-size:12px\"> Test Accuracy </span>" = accuracies
-                   #Parameters = as.array(params)
                    ,check.names = F))})
   
   
@@ -585,17 +610,17 @@ server <- function(input, output,session) {
                  test_preds <- round(predict.glm(models[[1]],type="response",newdata = test))
                
                  # Get test set accuracy
-                 accuracies[[1]] <- paste(toString(round(mean(test_preds == test$Survived)*100,1)),"%",sep="")
+                 accuracies[[1]] <- paste(toString(round(mean(test_preds == test$Survived)*100)),"%",sep="")
 
                  # Get model coefficients
-                 coeffs <- round(coef(models[[1]]),2)
+                 coeffs <- coef(models[[1]])
                  
                  params[[1]] <- paste(
-                   "ln(p/(1-p)) = ", 
-                   coeffs["(Intercept)"],
-                   " + PClass", coeffs["Pclass"],
-                   " + Age",  coeffs["Age"],
-                   " + Sex",  coeffs["Sexmale"],
+                   #"ln(p/(1-p)) = ", 
+                   round(coeffs["(Intercept)"],1)," ",
+                   round(coeffs["Pclass"],1),"Class ",
+                   round(coeffs["Age"],2),"Age ",
+                   round(coeffs["Sexmale"],1),"Sex ",
                    sep = "")
                
                  # Get model train size and test size
@@ -610,6 +635,7 @@ server <- function(input, output,session) {
                  number <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px;\">",as.integer(number),"</span>")
                  trainSize <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px;\">",as.integer(as.array(trainSize)),"</span>")
                  testSize <- paste0("<span class= \"text-inside-cell\" style=\"font-size:12px;\">",as.integer(as.array(testSize)),"</span>")
+                 params <- paste0("<span class= \"text-inside-cell\" style=\"font-size:11px;\">",as.array(params),"</span>")
                  
                  accuracies <- ifelse(input$createModel < 5,
                                       paste0("<span class= \"text-inside-cell\" style=\"font-size:12px; color:red;\">",as.array(accuracies),"</span>"),
@@ -618,41 +644,43 @@ server <- function(input, output,session) {
                
                # Put all columns into model information dataframe
                modelDataframe(data.frame(
-                 "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Model # </span>" = number,
-                 "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Train Set </span>" = as.array(trainSet),
-                 "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Test Set </span>"= as.array(testSet),
-                 "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Train Set Size </span>" = trainSize,
-                 "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Test Set Size </span>" = testSize,
+                 "<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Model </span>" = number,
+                 "<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Train Set </span>" = as.array(trainSet),
+                 "<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Test Set </span>"= as.array(testSet),
+                 #"<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Train Size </span>" = trainSize,
+                 #"<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Test Size </span>" = testSize,
+                 "<span class= \"text-inside-cell\" style=\"font-size:11px;\"> Parameters </span>" = as.array(params),
                  "<span class= \"text-inside-cell\" style=\"font-size:12px;\"> Test Accuracy </span>" = accuracies
-                 #Parameters = as.array(params)
                  ,check.names = F)
                )})
   
 
   # Get Help Button Message
   observeEvent(input$getHelp, {
-    shinyalert("Confused?", "
-                            <div style='text-align: center;'>
-                            Cross validation is a way to get a more <span style=\"font-weight:bold; \"> reliable </span>test accuracy of a model. <br> <br>
-                                                                      
-
-                            <span style=\"font-weight:bold; \"> Without Cross Validation </span> <br> 
+    shinyalert("Confused?", paste0( "We'll use <u>logistic regression models</u> to predict <br> if passengers on the Titanic would have <u>survived</u> <br> <br>",
+                                    small_titanic(),"
+                                    <br>
+                                    <div style='text-align: center;'>
+                                    Cross validation is a way to get a more <span style=\"font-weight:bold; \"> reliable </span>test accuracy of a model. <br> <br>
+                                                                              
+        
+                                    <span style=\"font-weight:bold; \"> Without Cross Validation </span> <br> 
+                       
+                                    The test accuracy of a model changes for different train test splits. <br> <br>
+                       
+                                    <span style=\"font-weight:bold; \"> With Cross Validation </span> <br> 
+                       
+                                    The average test accuracy varies considerably less. <br> <br> <br> 
+                       
+                                    Cross Validation Steps: <br>
+                                    <div style='text-align: left; display: inline-block;'>
+                                    <span style=\"font-size: 14px; line-height: 1;\">
+                                    1. Randomly divide the dataset into K sections <br>
+                                    2. Create K models that are trained on K-1 sections and tested on 1 section. <br>
+                                    3. Average the test accuracy of the K models to obtain a more reliable metric. <br> <br> <br>
+                                    </span> </div>
                
-                            The test accuracy of a model changes for different train test splits. <br> <br>
-               
-                            <span style=\"font-weight:bold; \"> With Cross Validation </span> <br> 
-               
-                            The average test accuracy varies considerably less. <br> <br> <br> 
-               
-                            Cross Validation Steps: <br>
-                            <div style='text-align: left; display: inline-block;'>
-                            <span style=\"font-size: 14px; line-height: 1;\">
-                            1. Randomly divide the dataset into K sections <br>
-                            2. Create K models that are trained on K-1 sections and tested on 1 section. <br>
-                            3. Average the test accuracy of the K models to obtain a more reliable metric. <br> <br> <br>
-                            </span> </div>
-               
-                            ",size = "m",html = T)})}
+                            "),size = "m",html = T)})}
 
 # Run RShiny Application
 shinyApp(ui = ui, server = server)

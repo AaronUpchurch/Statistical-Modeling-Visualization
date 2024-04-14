@@ -1,1 +1,0 @@
-[{"name":"app.R","content":"library(shiny)\r\nlibrary(shinydashboard)\r\n\r\nui <- fluidPage(\r\n\r\n    valueBoxOutput(\"random\")\r\n  \r\n)\r\n\r\nserver <- function(input, output, session) {\r\n  output$random <- renderValueBox({\r\n    invalidateLater(1000, session)\r\n    h4(sample(1:100, 1))\r\n  })\r\n}\r\n\r\nshinyApp(ui = ui, server = server)","type":"text"}]

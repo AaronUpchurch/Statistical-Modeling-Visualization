@@ -5,7 +5,7 @@ account: aaronupchurch
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 11742571
-bundleId: 8486236
+bundleId: 8492515
 url: https://aaronupchurch.shinyapps.io/cross_validation/
 version: 1
 asMultiple: FALSE

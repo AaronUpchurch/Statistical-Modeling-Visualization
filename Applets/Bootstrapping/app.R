@@ -23,6 +23,9 @@ ui <- fluidPage(
   #-------- Control Panel -------------
   fluidRow(sidebarPanel(
     
+      h5(strong("Tutorial")),
+      h5(uiOutput("tutorial_text")),
+    
       # Distribution Selection
       selectInput(inputId = "distribution",
                   label = "1. Select Population Distribution",
@@ -106,6 +109,66 @@ ui <- fluidPage(
 
 #============== Server Functions ===================
 server <- function(input, output,session) {
+  
+  #------- Tutorial Message -------------#
+  output$tutorial_text <- renderUI({
+    
+    # Initial tutorial message
+    if(input$getSample == 0){
+    text <-  HTML("Start with a <u>normal</u> population distribution and a metric <u>mean</u>. <br> <br>
+                  First, <b>draw a sample from the population<b>.")}
+    
+    # after create sample
+    else if(input$getBootstrap == 0){
+    text <-  HTML("Next, <b>draw a bootstrap from the sample<b>.")}
+    
+    # after creating first bootstrap
+    else if(input$getBootstrap == 1){
+    text <-  HTML("The animation shows the bootstrap being created by <u>sampling with replacement</u> from the sample.<br> <br>
+                  The <span style=\'color:red\'> mean </span> of the bootstrap is shown in the bottom dotplot. <br> <br>
+                  Generate another bootstrap.
+                  ")}
+    
+    # after creating second bootstrap
+    else if(input$getBootstrap < 5){
+      text <-  HTML("The dotplot of bootstrap means will keep being filled as more bootstraps are created. <br> <br>
+                    Keep generating bootstraps.
+                  ")}
+    
+    else if(input$get100Bootstrap == 0){
+      text <-  HTML("<b>Draw 100 bootstraps from the sample</b>.
+                  ")}
+    
+    else if(input$showCI==F){
+      text <-  HTML("Click on <b> show confidence interval</b> to create a confidence interval for the <u>population mean</u>.
+                  ")}
+    
+    else{
+      text <- HTML("The 95% confidence interval is created by taking the bootstrap means at the <u>2.5th</u> and <u>97.5th</u> percentile. <br> <br>
+                   
+                   Bootstrapping is useful because it calculates statistics with <u>simulations</u> instead of <u>equations</u>. <br> <br>
+                   
+                   Try bootstrapping with other population distributions and other metrics.")
+    }
+    
+    
+    
+    
+    
+    
+    # Create styles for text box
+    box_style <- "width: 405px; height: auto;  background-color: #FFFFFF; border: 1px solid #2c3e50; display: flex; justify-content: center; align-items: center; padding: 10px;"
+    text_style <- "color: black; font-size: 14px;"
+    
+    # add styles to text bos
+    box_text <- tags$div(
+      style = box_style,
+      tags$span(style = text_style, text)
+    )
+  
+    # Return the HTML text box
+    box_text
+  })
   
   #------ Initial Popup -----------------#
   showPopup <- reactiveVal(T)
@@ -389,7 +452,7 @@ server <- function(input, output,session) {
     if(length(bootstrap_statistics$data) == 1){
       ggplot(d, aes(x = x, fill = Fill)) +
         scale_fill_manual(values = category_colors)+
-        geom_dotplot(stackgroups = T,method = "histodot", dotsize = 0.5)+
+        geom_dotplot(stackgroups = T,method = "histodot", dotsize = 0.4)+
         theme_linedraw() + xlim(0,2*bootstrap_statistics$data[1])  + 
         theme(axis.text.y=element_blank(),axis.ticks.y=element_blank())
     }
@@ -397,7 +460,7 @@ server <- function(input, output,session) {
     
     ggplot(d, aes(x = x, fill = Fill)) +
       scale_fill_manual(values = category_colors)+
-      geom_dotplot(stackgroups = T,method = "histodot",  dotsize = 0.5)+
+      geom_dotplot(stackgroups = T,method = "histodot",  dotsize = 0.4)+
       theme_linedraw() + 
         xlab(paste("bootstrap ",input$metric,"s",sep="")) +
         theme(axis.text.y=element_blank(),axis.ticks.y=element_blank()) 

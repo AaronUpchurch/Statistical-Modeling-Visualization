@@ -1,12 +1,12 @@
-name: HomePage
-title: HomePage
+name: Bootstrapping
+title: Bootstrapping
 username: aaronupchurch
 account: aaronupchurch
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 11744197
-bundleId: 8487115
-url: https://aaronupchurch.shinyapps.io/HomePage/
+appId: 11750410
+bundleId: 8491311
+url: https://aaronupchurch.shinyapps.io/Bootstrapping/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
