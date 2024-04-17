@@ -1,10 +1,9 @@
 library(shiny)
-library(ggplot2)
-library(latex2exp)
 library(DT)
 library(jsonlite)
+library(ggplot2)
 library(officer)
-
+library(latex2exp)
 
 #----------------------------------------------------
 # TODO - CODE BELOW FOR CATEGORICAL APPLET:
@@ -82,20 +81,32 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$calculate, {
-    if (values2$data$A[1] > 0 & values2$data$A[2]> 0 & values2$data$B[1]> 0 & values2$data$B[2]> 0)
+    tryCatch({if (values2$data$A[1] > 0 & values2$data$A[2]> 0 & values2$data$B[1]> 0 & values2$data$B[2]> 0 & 
+                  (typeof(values2$data$A[1]) == "integer" | typeof(values2$data$A[1]) == "double") &
+                  (typeof(values2$data$A[2]) == "integer" | typeof(values2$data$A[2]) == "double") &
+                  (typeof(values2$data$B[1]) == "integer" | typeof(values2$data$B[1]) == "double") &
+                  (typeof(values2$data$B[2]) == "integer" | typeof(values2$data$B[2]) == "double"))
     {
       valid$value <- TRUE
       values$data <- values2$data
     }
-    else
-    {
-      valid$value <- FALSE
-      showModal(modalDialog(
-        title = "Error",
-        "Please enter positive numbers in all cells.",
-        easyClose = TRUE
-      ))
-    }
+      else
+      {
+        valid$value <- FALSE
+        showModal(modalDialog(
+          title = "Error",
+          "Please enter positive numbers in all cells.",
+          easyClose = TRUE
+        ))
+      }}, error = function(e) {
+        valid$value <- FALSE
+        showModal(modalDialog(
+          title = "Error",
+          "Please enter positive numbers in all cells.",
+          easyClose = TRUE
+        ))
+        })
+    
   })
   
   output$odds_ui <- renderUI({
@@ -242,11 +253,11 @@ server <- function(input, output, session) {
       z <- exp(log(odds_ratio) - 1.96*(sqrt((1/x[1,1]) + (1/x[1,2]) + (1/x[2,1]) + (1/x[2,2]))))
       if (y > 1 & z < 1)
       {
-        input_text <- paste(round(z, 4)*100, "% lower to", round(y - 1, 4)*100, "% higher in the category")
+        input_text <- paste(round(1-z, 4)*100, "% lower to", round(y - 1, 4)*100, "% higher in the category")
       }
       else if (y <1 & z < 1)
       {
-        input_text <- paste(round(z, 4)*100, "% to", round(y, 4)*100, "% lower in the category")
+        input_text <- paste(round(1-y, 4)*100, "% to", round(1-z, 4)*100, "% lower in the category")
       }
       else if (y > 1 & z > 1)
       {
@@ -281,7 +292,7 @@ server <- function(input, output, session) {
       }
       else if (odds_ratio < 1)
       {
-        in_text <- paste("~", round((odds_ratio)*100), "% lower for individuals in the category")
+        in_text <- paste("~", round((1-odds_ratio)*100), "% lower for individuals in the category")
       }
       else
       {
@@ -400,10 +411,10 @@ the stronger the evidence against the null hypothesis H<sub>0</sub>. <br><br> Un
         HTML(paste("And we now can calculate the test-statistic based on the formula: ")),
         withMathJax("$$X^2 = \\sum\\frac{(\\text{O} - \\text{E})^2}{\\text{E}}$$"), 
         withMathJax("$$ = 
-                    \\frac{(", x[1,1], "-", round(z[1,1], 2), ")^2}{", round(z[1,1], 2), "} + 
-                    \\frac{(", x[1,2], "-", round(z[1,2], 2), ")^2}{", round(z[1,2], 2), "} +
-                    \\frac{(", x[2,1], "-", round(z[2,1], 2), ")^2}{", round(z[2,1], 2), "} +
-                    \\frac{(", x[2,2], "-", round(z[2,2], 2), ")^2}{", round(z[2,2], 2), "} = ", round(y$statistic, 2), "$$"),
+                    \\frac{(", x[1,1], "-", signif(z[1,1], 3), ")^2}{", signif(z[1,1], 3), "} + 
+                    \\frac{(", x[1,2], "-", signif(z[1,2], 3), ")^2}{", signif(z[1,2], 3), "} +
+                    \\frac{(", x[2,1], "-", signif(z[2,1], 3), ")^2}{", signif(z[2,1], 3), "} +
+                    \\frac{(", x[2,2], "-", signif(z[2,2], 3), ")^2}{", signif(z[2,2], 3), "} = ", round(y$statistic, 2), "$$"),
         HTML(paste("Alternatively, in the special 2x2 case, We can calculate the Chi-Squared test-statistic using the following formula: ")),
         withMathJax("$$X^2 = \\frac{n(n_{11}n_{22} - n_{12}n_{21})^2}{n_{1+}n_{2+}n_{+1}n_{+2}} \\text{where} $$"),
         fluidRow(
@@ -454,13 +465,41 @@ the stronger the evidence against the null hypothesis H<sub>0</sub>. <br><br> Un
     }
     
     observeEvent(input$generatePlot, {
-      output$mosaicPlot <- renderPlot({
-        generateMosaicPlot()
-      })
-      showModal(modalDialog(
-        title = "Mosaic Plot",
-        plotOutput("mosaicPlot")
-      ))
+      
+      tryCatch({if (values2$data$A[1] > 0 & values2$data$A[2]> 0 & values2$data$B[1]> 0 & values2$data$B[2]> 0 & 
+                    (typeof(values2$data$A[1]) == "integer" | typeof(values2$data$A[1]) == "double") &
+                    (typeof(values2$data$A[2]) == "integer" | typeof(values2$data$A[2]) == "double") &
+                    (typeof(values2$data$B[1]) == "integer" | typeof(values2$data$B[1]) == "double") &
+                    (typeof(values2$data$B[2]) == "integer" | typeof(values2$data$B[2]) == "double"))
+      {
+        valid$value <- TRUE
+        values$data <- values2$data
+        output$mosaicPlot <- renderPlot({
+          generateMosaicPlot()
+        })
+        showModal(modalDialog(
+          title = "Mosaic Plot",
+          plotOutput("mosaicPlot")
+        ))
+        
+      }
+        else
+        {
+          valid$value <- FALSE
+          showModal(modalDialog(
+            title = "Error",
+            "Please enter positive numbers in all cells.",
+            easyClose = TRUE
+          ))
+        }}, error = function(e) {
+          valid$value <- FALSE
+          showModal(modalDialog(
+            title = "Error",
+            "Please enter positive numbers in all cells.",
+            easyClose = TRUE
+          ))
+        })
+
     })
     
     
